@@ -68,15 +68,15 @@ class _RegisterViewState extends State<RegisterView> {
         barrierDismissible: false,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Đăng Ký Thành Công', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-          content: Text('Tài khoản của bạn đã được khởi tạo thành công. Bạn có thể sử dụng email này để đăng nhập ngay bây giờ.', style: GoogleFonts.outfit()),
+          title: Text('Đăng Ký Thành Công', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+          content: Text('Tài khoản của bạn đã được khởi tạo thành công. Bạn có thể sử dụng email này để đăng nhập ngay bây giờ.', style: GoogleFonts.beVietnamPro()),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Pop dialog
                 Navigator.pop(context); // Go back to login
               },
-              child: Text('Đăng Nhập Ngay', style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+              child: Text('Đăng Nhập Ngay', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -98,7 +98,7 @@ class _RegisterViewState extends State<RegisterView> {
         ),
         title: Text(
           'Đăng Ký Tài Khoản',
-          style: GoogleFonts.outfit(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18),
+          style: GoogleFonts.beVietnamPro(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: Stack(
@@ -151,7 +151,7 @@ class _RegisterViewState extends State<RegisterView> {
                           children: [
                             Text(
                               'Tạo Tài Khoản Mới',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.beVietnamPro(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.textDark,
@@ -299,7 +299,7 @@ class _RegisterViewState extends State<RegisterView> {
                               const SizedBox(height: 16),
                               Text(
                                 _errorMessage,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.beVietnamPro(
                                   fontSize: 13,
                                   color: Colors.redAccent,
                                   fontWeight: FontWeight.w500,
@@ -333,7 +333,7 @@ class _RegisterViewState extends State<RegisterView> {
                                     )
                                   : Text(
                                       'Đăng Ký',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.beVietnamPro(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -349,13 +349,13 @@ class _RegisterViewState extends State<RegisterView> {
                         children: [
                           Text(
                             'Đã có tài khoản? ',
-                            style: GoogleFonts.outfit(color: AppTheme.textLight),
+                            style: GoogleFonts.beVietnamPro(color: AppTheme.textLight),
                           ),
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
                             child: Text(
                               'Đăng nhập ngay',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.beVietnamPro(
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
@@ -376,3 +376,4 @@ class _RegisterViewState extends State<RegisterView> {
     );
   }
 }
+

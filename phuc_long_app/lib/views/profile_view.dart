@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import 'change_pass_view.dart';
@@ -68,7 +67,7 @@ class _ProfileViewState extends State<ProfileView> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Đã cập nhật thông tin cá nhân thành công!', style: GoogleFonts.outfit()),
+        content: Text('Đã cập nhật thông tin cá nhân thành công!', style: GoogleFonts.beVietnamPro()),
         backgroundColor: AppTheme.primaryColor,
       ),
     );
@@ -79,12 +78,12 @@ class _ProfileViewState extends State<ProfileView> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Đăng xuất', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?', style: GoogleFonts.outfit()),
+        title: Text('Đăng xuất', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?', style: GoogleFonts.beVietnamPro()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: AppTheme.textLight)),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ),
           TextButton(
             onPressed: () {
@@ -95,7 +94,7 @@ class _ProfileViewState extends State<ProfileView> {
                 (route) => false,
               );
             },
-            child: Text('Đồng ý', style: GoogleFonts.outfit(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: Text('Đồng ý', style: GoogleFonts.beVietnamPro(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -110,8 +109,6 @@ class _ProfileViewState extends State<ProfileView> {
         body: Center(child: Text('Vui lòng đăng nhập')),
       );
     }
-
-    final userOrders = _appState.orders;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -191,7 +188,7 @@ class _ProfileViewState extends State<ProfileView> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Avatar representation (Forest Green circle with gold initial)
+                      // Avatar representation
                       Container(
                         width: 110,
                         height: 110,
@@ -215,7 +212,7 @@ class _ProfileViewState extends State<ProfileView> {
                           child: Center(
                             child: Text(
                               user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                              style: GoogleFonts.playfairDisplay(
+                              style: GoogleFonts.beVietnamPro(
                                 fontSize: 42,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.goldColor,
@@ -229,7 +226,7 @@ class _ProfileViewState extends State<ProfileView> {
                       // User Basic Info
                       Text(
                         user.name,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.textDark,
@@ -238,7 +235,7 @@ class _ProfileViewState extends State<ProfileView> {
                       const SizedBox(height: 4),
                       Text(
                         user.email,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           fontSize: 14,
                           color: AppTheme.textLight,
                         ),
@@ -256,7 +253,7 @@ class _ProfileViewState extends State<ProfileView> {
                             children: [
                               Text(
                                 'Thông Tin Cá Nhân',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.beVietnamPro(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: AppTheme.primaryColor,
@@ -303,7 +300,7 @@ class _ProfileViewState extends State<ProfileView> {
                                 ElevatedButton.icon(
                                   onPressed: _saveProfile,
                                   icon: const Icon(Icons.check_rounded, size: 18),
-                                  label: Text('Lưu Thay Đổi', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                  label: Text('Lưu Thay Đổi', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
@@ -328,7 +325,7 @@ class _ProfileViewState extends State<ProfileView> {
                         elevation: 0,
                         child: ListTile(
                           leading: const Icon(Icons.key_outlined, color: AppTheme.goldColor),
-                          title: Text('Đổi mật khẩu', style: GoogleFonts.outfit(fontWeight: FontWeight.w500)),
+                          title: Text('Đổi mật khẩu', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.w500)),
                           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.textLight),
                           onTap: () {
                             Navigator.push(
@@ -338,146 +335,6 @@ class _ProfileViewState extends State<ProfileView> {
                           },
                         ),
                       ),
-
-                      const SizedBox(height: 24),
-
-                      // Order History Section Title
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Lịch Sử Đơn Hàng',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Order History List
-                      if (userOrders.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 32.0),
-                          child: Column(
-                            children: [
-                              Icon(Icons.history_rounded, size: 48, color: AppTheme.textLight.withOpacity(0.3)),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Bạn chưa đặt đơn hàng nào',
-                                style: GoogleFonts.outfit(color: AppTheme.textLight),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          itemCount: userOrders.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final order = userOrders[index];
-                            final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(order.date);
-                            final isCompleted = order.status == 'Đã hoàn thành';
-                            
-                            return Card(
-                              margin: EdgeInsets.zero,
-                              elevation: 0,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Đơn hàng: #${order.id}',
-                                          style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.textDark,
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: isCompleted 
-                                                ? Colors.green.withOpacity(0.08) 
-                                                : AppTheme.goldColor.withOpacity(0.08),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            order.status,
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: isCompleted ? Colors.green : AppTheme.goldColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      formattedDate,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        color: AppTheme.textLight,
-                                      ),
-                                    ),
-                                    const Divider(height: 16, color: AppTheme.dividerColor),
-                                    // List items summary
-                                    ...order.items.map((item) {
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 4.0),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                '${item.beverage.name} (x${item.quantity}) [Size ${item.size}]',
-                                                style: GoogleFonts.outfit(fontSize: 13),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            Text(
-                                              NumberFormat.currency(locale: 'vi_VN', symbol: 'đ')
-                                                  .format(item.totalPrice),
-                                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-                                    const Divider(height: 16, color: AppTheme.dividerColor),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Tổng thanh toán',
-                                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                                        ),
-                                        Text(
-                                          NumberFormat.currency(locale: 'vi_VN', symbol: 'đ')
-                                              .format(order.total),
-                                          style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.primaryColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -504,7 +361,7 @@ class _ProfileViewState extends State<ProfileView> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.beVietnamPro(
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: AppTheme.textLight,
@@ -520,7 +377,7 @@ class _ProfileViewState extends State<ProfileView> {
               Expanded(
                 child: Text(
                   controller.text.isNotEmpty ? controller.text : '(Chưa thiết lập)',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.beVietnamPro(
                     fontSize: 15,
                     color: controller.text.isNotEmpty ? AppTheme.textDark : AppTheme.textLight.withOpacity(0.6),
                     fontWeight: FontWeight.w500,
@@ -534,7 +391,7 @@ class _ProfileViewState extends State<ProfileView> {
             controller: controller,
             keyboardType: keyboardType,
             maxLines: maxLines,
-            style: GoogleFonts.outfit(fontSize: 15, color: AppTheme.textDark),
+            style: GoogleFonts.beVietnamPro(fontSize: 15, color: AppTheme.textDark),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: AppTheme.primaryColor),
               contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -553,3 +410,4 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 }
+

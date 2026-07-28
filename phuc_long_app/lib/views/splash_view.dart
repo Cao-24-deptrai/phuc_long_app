@@ -122,7 +122,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                         // App Title
                         Text(
                           'PHÚC LONG',
-                          style: GoogleFonts.playfairDisplay(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 36,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 4.0,
@@ -132,7 +132,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                         const SizedBox(height: 6),
                         Text(
                           'TEA & COFFEE',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 4.0,
@@ -145,7 +145,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                           padding: const EdgeInsets.symmetric(horizontal: 40.0),
                           child: Text(
                             'Tách trà đậm vị, tách cà phê đậm hương',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.beVietnamPro(
                               fontSize: 14,
                               color: Colors.white.withOpacity(0.7),
                               fontStyle: FontStyle.italic,
@@ -199,7 +199,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                         ),
                         child: Text(
                           'Bắt Đầu Ngay',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -216,3 +216,4 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
     );
   }
 }
+

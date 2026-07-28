@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import 'store_view.dart';
+import 'orders_view.dart';
 import 'profile_view.dart';
 
 class MainPage extends StatefulWidget {
@@ -15,6 +17,7 @@ class _MainPageState extends State<MainPage> {
   
   final List<Widget> _pages = const [
     StoreView(),
+    OrdersView(),
     ProfileView(),
   ];
 
@@ -38,7 +41,7 @@ class _MainPageState extends State<MainPage> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -50,6 +53,12 @@ class _MainPageState extends State<MainPage> {
                 ),
                 _buildNavItem(
                   index: 1,
+                  icon: Icons.receipt_long_outlined,
+                  activeIcon: Icons.receipt_long_rounded,
+                  label: 'Đơn hàng',
+                ),
+                _buildNavItem(
+                  index: 2,
                   icon: Icons.person_outline_rounded,
                   activeIcon: Icons.person_rounded,
                   label: 'Tài khoản',
@@ -79,13 +88,13 @@ class _MainPageState extends State<MainPage> {
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected 
                     ? AppTheme.primaryColor.withOpacity(0.08) 
@@ -101,11 +110,10 @@ class _MainPageState extends State<MainPage> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.beVietnamPro(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 color: color,
-                fontFamily: 'Outfit',
               ),
             ),
           ],
@@ -114,3 +122,4 @@ class _MainPageState extends State<MainPage> {
     );
   }
 }
+

@@ -57,15 +57,15 @@ class _ChangePassViewState extends State<ChangePassView> {
         barrierDismissible: false,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Thành Công', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-          content: Text('Mật khẩu của bạn đã được thay đổi thành công.', style: GoogleFonts.outfit()),
+          title: Text('Thành Công', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+          content: Text('Mật khẩu của bạn đã được thay đổi thành công.', style: GoogleFonts.beVietnamPro()),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Pop dialog
                 Navigator.pop(context); // Go back to profile
               },
-              child: Text('Đóng', style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+              child: Text('Đóng', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -87,7 +87,7 @@ class _ChangePassViewState extends State<ChangePassView> {
         ),
         title: Text(
           'Đổi Mật Khẩu',
-          style: GoogleFonts.outfit(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18),
+          style: GoogleFonts.beVietnamPro(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: Stack(
@@ -133,7 +133,7 @@ class _ChangePassViewState extends State<ChangePassView> {
                           children: [
                             Text(
                               'Đổi Mật Khẩu Mới',
-                              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                              style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
@@ -231,7 +231,7 @@ class _ChangePassViewState extends State<ChangePassView> {
                               const SizedBox(height: 16),
                               Text(
                                 _errorMessage,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.beVietnamPro(
                                   fontSize: 13,
                                   color: Colors.redAccent,
                                   fontWeight: FontWeight.w500,
@@ -265,7 +265,7 @@ class _ChangePassViewState extends State<ChangePassView> {
                                     )
                                   : Text(
                                       'Cập Nhật Mật Khẩu',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.beVietnamPro(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -285,3 +285,4 @@ class _ChangePassViewState extends State<ChangePassView> {
     );
   }
 }
+

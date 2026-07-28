@@ -37,7 +37,7 @@ class PhucLongLogo extends StatelessWidget {
             children: [
               Text(
                 'PHÚC LONG',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.beVietnamPro(
                   fontSize: size * 0.42,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
@@ -46,7 +46,7 @@ class PhucLongLogo extends StatelessWidget {
               ),
               Text(
                 'TEA & COFFEE',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.beVietnamPro(
                   fontSize: size * 0.18,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2.0,
@@ -170,3 +170,4 @@ class _LogoPainter extends CustomPainter {
     return oldDelegate.color != color;
   }
 }
+

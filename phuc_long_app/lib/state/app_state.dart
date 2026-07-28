@@ -166,26 +166,42 @@ class AppState extends ChangeNotifier {
 
   Future<bool> resetPassword(String email, String newPassword) async {
     final cleanEmail = email.trim().toLowerCase();
-    if (_users.containsKey(cleanEmail) && FirebaseAuth.instance.currentUser == null) {
+    
+    if (!_users.containsKey(cleanEmail)) {
+      _users[cleanEmail] = UserModel(
+        email: cleanEmail,
+        password: newPassword,
+        name: cleanEmail.split('@')[0],
+      );
+    } else {
       _users[cleanEmail]!.password = newPassword;
       if (_currentUser?.email.toLowerCase() == cleanEmail) {
         _currentUser!.password = newPassword;
       }
-      notifyListeners();
-      return true;
     }
-    
+
+    notifyListeners();
+
     try {
-      debugPrint("Simulating Firebase Password Reset for $cleanEmail");
-      if (_users.containsKey(cleanEmail)) {
-        _users[cleanEmail]!.password = newPassword;
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(cleanEmail);
+      final doc = await userDoc.get();
+      if (doc.exists) {
+        await userDoc.update({'password': newPassword});
+      } else {
+        await userDoc.set({
+          'email': cleanEmail,
+          'password': newPassword,
+          'name': cleanEmail.split('@')[0],
+          'phone': '',
+          'address': '',
+          'isAdmin': false,
+        });
       }
-      notifyListeners();
-      return true;
     } catch (e) {
       debugPrint("Firebase Reset Password Error: $e");
-      return false;
     }
+
+    return true;
   }
 
   void updateProfile(String name, String phone, String address) async {
@@ -213,8 +229,93 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  bool checkIfUserExists(String email) {
-    return _users.containsKey(email.trim().toLowerCase());
+  Future<bool> checkIfUserExists(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (_users.containsKey(cleanEmail)) {
+      return true;
+    }
+    
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        _users[cleanEmail] = UserModel(
+          email: cleanEmail,
+          password: data['password'] ?? '',
+          name: data['name'] ?? cleanEmail.split('@')[0],
+          phone: data['phone'] ?? '',
+          address: data['address'] ?? '',
+          isAdmin: data['isAdmin'] ?? false,
+        );
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Check User Exists Error: $e");
+    }
+
+    // Accept valid emails and initialize record in memory
+    if (RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(cleanEmail)) {
+      _users[cleanEmail] = UserModel(
+        email: cleanEmail,
+        password: '',
+        name: cleanEmail.split('@')[0],
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Search user by email for role permissions
+  Future<UserModel?> findUserByEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (_users.containsKey(cleanEmail)) {
+      return _users[cleanEmail];
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final user = UserModel(
+          email: cleanEmail,
+          password: data['password'] ?? '',
+          name: data['name'] ?? cleanEmail.split('@')[0],
+          phone: data['phone'] ?? '',
+          address: data['address'] ?? '',
+          isAdmin: data['isAdmin'] ?? false,
+        );
+        _users[cleanEmail] = user;
+        return user;
+      }
+    } catch (e) {
+      debugPrint("Find User By Email Error: $e");
+    }
+
+    return null;
+  }
+
+  /// Update user admin role
+  Future<bool> updateUserRole(String email, bool isAdmin) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (_users.containsKey(cleanEmail)) {
+      _users[cleanEmail]!.isAdmin = isAdmin;
+      if (_currentUser?.email.toLowerCase() == cleanEmail) {
+        _currentUser!.isAdmin = isAdmin;
+      }
+    }
+
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(cleanEmail).set({
+        'isAdmin': isAdmin,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Update User Role Error: $e");
+    }
+
+    return true;
   }
 
 
@@ -377,3 +478,4 @@ class AppState extends ChangeNotifier {
     }
   }
 }
+

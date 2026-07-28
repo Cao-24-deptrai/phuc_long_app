@@ -127,7 +127,7 @@ class _ShimmerBannerState extends State<ShimmerBanner>
                           ),
                           child: Text(
                             'SPECIAL PROMOTION',
-                            style: GoogleFonts.montserrat(
+                            style: GoogleFonts.beVietnamPro(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFFE5C07B),
@@ -140,7 +140,7 @@ class _ShimmerBannerState extends State<ShimmerBanner>
                           widget.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
@@ -152,7 +152,7 @@ class _ShimmerBannerState extends State<ShimmerBanner>
                           widget.subtitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
                             color: Colors.white.withOpacity(0.85),
@@ -173,7 +173,7 @@ class _ShimmerBannerState extends State<ShimmerBanner>
                                 children: [
                                   Text(
                                     widget.buttonText,
-                                    style: GoogleFonts.montserrat(
+                                    style: GoogleFonts.beVietnamPro(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF0C5A30),
@@ -299,3 +299,4 @@ class _BannerBackgroundPainter extends CustomPainter {
     return false;
   }
 }
+

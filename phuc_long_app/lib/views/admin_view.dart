@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/beverage.dart';
+import '../models/user.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import 'login_view.dart';
@@ -17,16 +18,27 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   late TabController _tabController;
   final AppState _appState = AppState();
 
+  // Role Permissions Tab Controllers & State
+  final TextEditingController _searchEmailController = TextEditingController();
+  bool _isSearching = false;
+  bool _hasSearched = false;
+  UserModel? _foundUser;
+  bool _selectedIsAdminRole = false;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _appState.addListener(_updateState);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchEmailController.dispose();
     _appState.removeListener(_updateState);
     super.dispose();
   }
@@ -38,6 +50,53 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   void _handleLogout() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const LoginView()),
+    );
+  }
+
+  void _performUserSearch() async {
+    final searchEmail = _searchEmailController.text.trim();
+    if (searchEmail.isEmpty) return;
+
+    setState(() {
+      _isSearching = true;
+      _hasSearched = false;
+      _foundUser = null;
+    });
+
+    final user = await _appState.findUserByEmail(searchEmail);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isSearching = false;
+      _hasSearched = true;
+      _foundUser = user;
+      _selectedIsAdminRole = user?.isAdmin ?? false;
+    });
+  }
+
+  void _saveRolePermission() async {
+    if (_foundUser == null) return;
+
+    final targetEmail = _foundUser!.email;
+    final newRoleIsAdmin = _selectedIsAdminRole;
+
+    await _appState.updateUserRole(targetEmail, newRoleIsAdmin);
+
+    if (!mounted) return;
+
+    setState(() {
+      _foundUser!.isAdmin = newRoleIsAdmin;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Đã cập nhật phân quyền thành công cho $targetEmail!',
+          style: GoogleFonts.beVietnamPro(),
+        ),
+        backgroundColor: AppTheme.primaryColor,
+      ),
     );
   }
 
@@ -58,11 +117,12 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           labelColor: AppTheme.primaryColor,
           unselectedLabelColor: AppTheme.textLight,
           indicatorColor: AppTheme.primaryColor,
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12),
           tabs: const [
             Tab(icon: Icon(Icons.dashboard_outlined), text: 'Thống Kê'),
             Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Đơn Hàng'),
             Tab(icon: Icon(Icons.local_drink_outlined), text: 'Sản Phẩm'),
+            Tab(icon: Icon(Icons.admin_panel_settings_outlined), text: 'Phân Quyền'),
           ],
         ),
       ),
@@ -73,6 +133,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           _buildDashboardTab(),
           _buildOrdersTab(),
           _buildProductsTab(),
+          _buildPermissionsTab(),
         ],
       ),
       floatingActionButton: _tabController.index == 2
@@ -101,7 +162,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
         children: [
           Text(
             'Tổng quan cửa hàng',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 16),
 
@@ -145,7 +206,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           // Custom Sales Chart (Animated)
           Text(
             'Doanh thu tuần này (nghìn đồng)',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 16),
           Container(
@@ -178,7 +239,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           // Latest Active Orders
           Text(
             'Đơn hàng gần đây',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 12),
           ListView.builder(
@@ -190,8 +251,8 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
-                  title: Text(order.id, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${order.customerName} • ${order.items.length} món', style: GoogleFonts.outfit(fontSize: 12)),
+                  title: Text(order.id, style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${order.customerName} • ${order.items.length} món', style: GoogleFonts.beVietnamPro(fontSize: 12)),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -204,7 +265,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     ),
                     child: Text(
                       order.status,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.beVietnamPro(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: order.status == 'Đã hoàn thành'
@@ -239,11 +300,11 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textLight, fontWeight: FontWeight.w500)),
+              Text(title, style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppTheme.textLight, fontWeight: FontWeight.w500)),
               Icon(icon, color: color, size: 20),
             ],
           ),
-          Text(val, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+          Text(val, style: GoogleFonts.beVietnamPro(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
         ],
       ),
     );
@@ -275,7 +336,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           },
         ),
         const SizedBox(height: 8),
-        Text(day, style: GoogleFonts.outfit(fontSize: 10, color: AppTheme.textDark, fontWeight: FontWeight.w500)),
+        Text(day, style: GoogleFonts.beVietnamPro(fontSize: 10, color: AppTheme.textDark, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -290,7 +351,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           children: [
             const Icon(Icons.receipt_long_outlined, size: 64, color: AppTheme.textLight),
             const SizedBox(height: 12),
-            Text('Chưa có đơn hàng nào.', style: GoogleFonts.outfit(color: AppTheme.textLight)),
+            Text('Chưa có đơn hàng nào.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ],
         ),
       );
@@ -307,7 +368,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           child: ExpansionTile(
             title: Row(
               children: [
-                Text(order.id, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                Text(order.id, style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                 const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -321,7 +382,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   ),
                   child: Text(
                     order.status,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.beVietnamPro(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: order.status == 'Đã hoàn thành'
@@ -336,7 +397,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             ),
             subtitle: Text(
               'Khách hàng: ${order.customerName} • ${order.total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ',
-              style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textLight),
+              style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight),
             ),
             childrenPadding: const EdgeInsets.all(16),
             children: [
@@ -345,22 +406,22 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Thông tin liên hệ:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text('Thông tin liên hệ:', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 4),
-                    Text('SĐT: ${order.customerPhone}', style: GoogleFonts.outfit(fontSize: 13)),
-                    Text('Địa chỉ: ${order.customerAddress}', style: GoogleFonts.outfit(fontSize: 13)),
+                    Text('SĐT: ${order.customerPhone}', style: GoogleFonts.beVietnamPro(fontSize: 13)),
+                    Text('Địa chỉ: ${order.customerAddress}', style: GoogleFonts.beVietnamPro(fontSize: 13)),
                     const SizedBox(height: 12),
-                    Text('Chi tiết sản phẩm:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text('Chi tiết sản phẩm:', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 6),
                     ...order.items.map((item) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('${item.quantity}x ${item.beverage.name} (${item.size})', style: GoogleFonts.outfit(fontSize: 13)),
+                              Text('${item.quantity}x ${item.beverage.name} (${item.size})', style: GoogleFonts.beVietnamPro(fontSize: 13)),
                               Text(
                                 '${item.totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ',
-                                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500),
+                                style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
@@ -368,7 +429,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     const Divider(height: 24, color: AppTheme.dividerColor),
                     
                     // Order status action triggers
-                    Text('Cập nhật trạng thái đơn:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text('Cập nhật trạng thái đơn:', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -404,7 +465,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
         ),
         child: Text(
           status == 'Đang chuẩn bị' ? 'Chuẩn bị' : status == 'Đã hoàn thành' ? 'Hoàn thành' : 'Hủy đơn',
-          style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+          style: GoogleFonts.beVietnamPro(fontSize: 11, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -445,15 +506,15 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 children: [
                   Text(
                     beverage.name,
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
                   ),
                   Text(
                     '${beverage.price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ',
-                    style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
+                    style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                   Text(
                     beverage.isAvailable ? 'Đang kinh doanh' : 'Tạm dừng bán',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.beVietnamPro(
                       fontSize: 11,
                       color: beverage.isAvailable ? Colors.green : Colors.redAccent,
                       fontWeight: FontWeight.bold,
@@ -491,6 +552,261 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     );
   }
 
+  // TAB 4: ROLE PERMISSIONS MANAGEMENT (ADMIN TAB)
+  Widget _buildPermissionsTab() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Phân Quyền Tài Khoản',
+            style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Nhập địa chỉ email tài khoản để tìm kiếm và tùy chỉnh quyền sử dụng.',
+            style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight),
+          ),
+          const SizedBox(height: 20),
+
+          // Search Box Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.dividerColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: GoogleFonts.beVietnamPro(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Nhập email (ví dụ: user@gmail.com)',
+                      hintStyle: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight),
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryColor),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.dividerColor),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    ),
+                    onSubmitted: (val) => _performUserSearch(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _isSearching ? null : _performUserSearch,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: _isSearching
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                        )
+                      : Text('Tìm kiếm', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Search Results / Selection Container
+          if (!_hasSearched)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40.0),
+                child: Column(
+                  children: [
+                    Icon(Icons.manage_accounts_outlined, size: 64, color: AppTheme.textLight.withOpacity(0.4)),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Nhập email và bấm Tìm kiếm để phân quyền tài khoản',
+                      style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_foundUser == null)
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 40, color: Colors.redAccent),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Không tìm thấy tài khoản',
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.redAccent),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Không có tài khoản nào khớp với email "${_searchEmailController.text.trim()}".',
+                    style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: AppTheme.dividerColor),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header User Info
+                    Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              _foundUser!.name.isNotEmpty ? _foundUser!.name.substring(0, 1).toUpperCase() : 'U',
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.goldColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _foundUser!.name,
+                                style: GoogleFonts.beVietnamPro(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _foundUser!.email,
+                                style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _foundUser!.isAdmin ? AppTheme.goldColor.withOpacity(0.12) : AppTheme.primaryColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _foundUser!.isAdmin ? 'Admin' : 'User',
+                            style: GoogleFonts.beVietnamPro(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _foundUser!.isAdmin ? AppTheme.goldColor : AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const Divider(height: 32, color: AppTheme.dividerColor),
+
+                    // Role Options Selection
+                    Text(
+                      'Tùy chọn phân quyền:',
+                      style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    ),
+                    const SizedBox(height: 12),
+
+                    RadioListTile<bool>(
+                      value: false,
+                      groupValue: _selectedIsAdminRole,
+                      activeColor: AppTheme.primaryColor,
+                      title: Text('Khách hàng (User)', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.w600, fontSize: 14)),
+                      subtitle: Text('Chỉ có quyền xem thực đơn, đặt hàng và xem hồ sơ cá nhân.', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedIsAdminRole = val;
+                          });
+                        }
+                      },
+                    ),
+
+                    RadioListTile<bool>(
+                      value: true,
+                      groupValue: _selectedIsAdminRole,
+                      activeColor: AppTheme.primaryColor,
+                      title: Text('Quản trị viên (Admin)', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.primaryColor)),
+                      subtitle: Text('Toàn quyền truy cập quản lý sản phẩm, đơn hàng, thống kê và phân quyền.', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedIsAdminRole = val;
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _saveRolePermission,
+                        icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
+                        label: Text('Lưu Phân Quyền', style: GoogleFonts.beVietnamPro(fontSize: 15, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   // Dialog to Edit Product details
   void _showEditProductDialog(Beverage beverage) {
     final nameController = TextEditingController(text: beverage.name);
@@ -500,7 +816,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Sửa sản phẩm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Sửa sản phẩm', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -527,7 +843,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: AppTheme.textLight)),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ),
           TextButton(
             onPressed: () {
@@ -540,7 +856,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               _appState.updateBeverage(updated);
               Navigator.pop(context);
             },
-            child: Text('Cập nhật', style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+            child: Text('Cập nhật', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -558,7 +874,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('Thêm thức uống mới', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          title: Text('Thêm thức uống mới', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -604,7 +920,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Hủy', style: GoogleFonts.outfit(color: AppTheme.textLight)),
+              child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
             ),
             TextButton(
               onPressed: () {
@@ -628,7 +944,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 
                 setState(() {}); // refresh FAB tab index state
               },
-              child: Text('Thêm mới', style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+              child: Text('Thêm mới', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

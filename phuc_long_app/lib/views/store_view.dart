@@ -70,12 +70,12 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Đăng xuất', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?', style: GoogleFonts.outfit()),
+        title: Text('Đăng xuất', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?', style: GoogleFonts.beVietnamPro()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: AppTheme.textLight)),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ),
           TextButton(
             onPressed: () {
@@ -84,7 +84,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                 MaterialPageRoute(builder: (context) => const LoginView()),
               );
             },
-            child: Text('Đồng ý', style: GoogleFonts.outfit(color: Colors.redAccent)),
+            child: Text('Đồng ý', style: GoogleFonts.beVietnamPro(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -179,14 +179,14 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                       children: [
                         RichText(
                           text: TextSpan(
-                            style: GoogleFonts.outfit(fontSize: 24, color: AppTheme.textDark),
+                            style: GoogleFonts.beVietnamPro(fontSize: 24, color: AppTheme.textDark),
                             children: [
                               const TextSpan(text: 'Chào bạn, '),
                               TextSpan(
                                 text: _appState.currentUser != null
                                     ? '${_appState.currentUser!.name}! 👋'
                                     : 'Thưởng thức trà ngay! 👋',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.beVietnamPro(
                                   fontWeight: FontWeight.bold,
                                   color: AppTheme.primaryColor,
                                 ),
@@ -219,7 +219,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                             },
                             decoration: InputDecoration(
                               hintText: 'Tìm kiếm thức uống yêu thích...',
-                              hintStyle: GoogleFonts.outfit(color: AppTheme.textLight, fontSize: 14),
+                              hintStyle: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 14),
                               prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textLight),
                               suffixIcon: _searchQuery.isNotEmpty
                                   ? IconButton(
@@ -265,7 +265,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Danh mục sản phẩm',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.beVietnamPro(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textDark,
@@ -305,7 +305,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                               const SizedBox(height: 12),
                               Text(
                                 'Không tìm thấy thức uống nào phù hợp.',
-                                style: GoogleFonts.outfit(color: AppTheme.textLight),
+                                style: GoogleFonts.beVietnamPro(color: AppTheme.textLight),
                               ),
                             ],
                           ),
@@ -377,7 +377,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                                     children: [
                                       Text(
                                         '$cartItemCount sản phẩm',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.beVietnamPro(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
@@ -385,7 +385,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                                       ),
                                       Text(
                                         'Xem chi tiết giỏ hàng',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.beVietnamPro(
                                           color: Colors.white70,
                                           fontSize: 11,
                                         ),
@@ -398,7 +398,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                                 children: [
                                   Text(
                                     '${_appState.cartSubtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.beVietnamPro(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -457,7 +457,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.beVietnamPro(
                 color: isSelected ? Colors.white : AppTheme.textDark,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 fontSize: 13,
@@ -526,7 +526,7 @@ class _BeverageCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Bán chạy 🔥',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             color: Colors.white,
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -572,7 +572,7 @@ class _BeverageCard extends StatelessWidget {
                 children: [
                   Text(
                     beverage.name,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.beVietnamPro(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                       color: AppTheme.textDark,
@@ -583,7 +583,7 @@ class _BeverageCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     beverage.description,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.beVietnamPro(
                       fontSize: 11,
                       color: AppTheme.textLight,
                     ),
@@ -596,7 +596,7 @@ class _BeverageCard extends StatelessWidget {
                     children: [
                       Text(
                         '${beverage.price.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           color: AppTheme.primaryColor,
@@ -721,7 +721,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                     children: [
                       Text(
                         widget.beverage.name,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.textDark,
@@ -751,7 +751,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                                       : widget.beverage.category == BeverageCategory.coffee
                                           ? 'Cà phê'
                                           : 'Đặc sản',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.beVietnamPro(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.primaryColor,
@@ -763,7 +763,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                       const SizedBox(height: 8),
                       Text(
                         '${widget.beverage.price.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.primaryColor,
@@ -787,19 +787,19 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                 children: [
                   Text(
                     'Mô tả sản phẩm',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     widget.beverage.description,
-                    style: GoogleFonts.outfit(color: AppTheme.textLight, fontSize: 13),
+                    style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
                   ),
                   const SizedBox(height: 20),
 
                   // SIZE SELECTION
                   Text(
                     'Chọn kích cỡ',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -816,7 +816,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                   // SUGAR SELECTION
                   Text(
                     'Mức đường',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -834,7 +834,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                   // ICE SELECTION
                   Text(
                     'Mức đá',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -853,7 +853,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                     children: [
                       Text(
                         'Số lượng',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                       ),
                       Row(
                         children: [
@@ -880,7 +880,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                             padding: const EdgeInsets.symmetric(horizontal: 16.0),
                             child: Text(
                               '$_quantity',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.beVietnamPro(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.textDark,
@@ -929,11 +929,11 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                       children: [
                         Text(
                           'Tổng tiền',
-                          style: GoogleFonts.outfit(color: AppTheme.textLight, fontSize: 13),
+                          style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
                         ),
                         Text(
                           '${_totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryColor,
@@ -959,7 +959,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                           SnackBar(
                             content: Text(
                               'Đã cập nhật ${widget.beverage.name} trong giỏ hàng',
-                              style: GoogleFonts.outfit(),
+                              style: GoogleFonts.beVietnamPro(),
                             ),
                             backgroundColor: AppTheme.primaryColor,
                             duration: const Duration(seconds: 2),
@@ -981,7 +981,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                           SnackBar(
                             content: Text(
                               'Đã thêm $_quantity x ${widget.beverage.name} vào giỏ hàng',
-                              style: GoogleFonts.outfit(),
+                              style: GoogleFonts.beVietnamPro(),
                             ),
                             backgroundColor: AppTheme.primaryColor,
                             duration: const Duration(seconds: 2),
@@ -1002,7 +1002,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                     ),
                     child: Text(
                       widget.cartItemIndex != null ? 'Cập Nhật' : 'Thêm Vào Giỏ Hàng',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.beVietnamPro(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -1041,7 +1041,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
             children: [
               Text(
                 size,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.beVietnamPro(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: isSelected ? Colors.white : AppTheme.textDark,
@@ -1050,7 +1050,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
               const SizedBox(height: 2),
               Text(
                 size == 'S' ? '-5k' : size == 'M' ? 'Mặc định' : '+10k',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.beVietnamPro(
                   fontSize: 9,
                   color: isSelected ? Colors.white70 : AppTheme.textLight,
                 ),
@@ -1085,7 +1085,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
         child: Center(
           child: Text(
             text,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.beVietnamPro(
               color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               fontSize: 12,
@@ -1121,7 +1121,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
             child: Center(
               child: Text(
                 text,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.beVietnamPro(
                   color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   fontSize: 12,
@@ -1187,21 +1187,21 @@ class _CartSheetState extends State<_CartSheet> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Xác nhận xóa',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.beVietnamPro(
             fontWeight: FontWeight.bold,
             color: Colors.redAccent,
           ),
         ),
         content: Text(
           'Bạn có chắc chắn muốn xóa sản phẩm "$itemName" khỏi giỏ hàng không?',
-          style: GoogleFonts.outfit(),
+          style: GoogleFonts.beVietnamPro(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Hủy',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.beVietnamPro(
                 color: AppTheme.textLight,
                 fontWeight: FontWeight.w600,
               ),
@@ -1221,7 +1221,7 @@ class _CartSheetState extends State<_CartSheet> {
             ),
             child: Text(
               'Xóa',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.beVietnamPro(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1289,7 +1289,7 @@ class _CartSheetState extends State<_CartSheet> {
               const SizedBox(height: 20),
               Text(
                 'Đặt hàng thành công!',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.beVietnamPro(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textDark,
@@ -1298,7 +1298,7 @@ class _CartSheetState extends State<_CartSheet> {
               const SizedBox(height: 8),
               Text(
                 'Đơn hàng của bạn đã được tiếp nhận và đang được xử lý. Bạn có thể kiểm tra trạng thái trong mục quản trị nếu là Admin.',
-                style: GoogleFonts.outfit(color: AppTheme.textLight, fontSize: 13),
+                style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -1310,7 +1310,7 @@ class _CartSheetState extends State<_CartSheet> {
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Đóng', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                child: Text('Đóng', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -1351,7 +1351,7 @@ class _CartSheetState extends State<_CartSheet> {
               children: [
                 Text(
                   _isCheckoutMode ? 'Thông tin giao hàng' : 'Giỏ hàng của bạn',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.beVietnamPro(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textDark,
@@ -1365,7 +1365,7 @@ class _CartSheetState extends State<_CartSheet> {
                     icon: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
                     label: Text(
                       'Xóa hết',
-                      style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 13),
+                      style: GoogleFonts.beVietnamPro(color: Colors.redAccent, fontSize: 13),
                     ),
                   ),
               ],
@@ -1384,7 +1384,7 @@ class _CartSheetState extends State<_CartSheet> {
                         const SizedBox(height: 12),
                         Text(
                           'Giỏ hàng của bạn đang trống.',
-                          style: GoogleFonts.outfit(color: AppTheme.textLight),
+                          style: GoogleFonts.beVietnamPro(color: AppTheme.textLight),
                         ),
                       ],
                     ),
@@ -1410,7 +1410,7 @@ class _CartSheetState extends State<_CartSheet> {
                       children: [
                         Text(
                           'Tổng thanh toán',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.textDark,
@@ -1418,7 +1418,7 @@ class _CartSheetState extends State<_CartSheet> {
                         ),
                         Text(
                           '${_appState.cartSubtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryColor,
@@ -1448,7 +1448,7 @@ class _CartSheetState extends State<_CartSheet> {
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                     ),
-                                    child: Text('Quay lại', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                    child: Text('Quay lại', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -1472,7 +1472,7 @@ class _CartSheetState extends State<_CartSheet> {
                                   ),
                                   child: Text(
                                     _isCheckoutMode ? 'Đặt Hàng Ngay' : 'Tiếp Tục Thanh Toán',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.beVietnamPro(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
                                     ),
@@ -1526,17 +1526,17 @@ class _CartSheetState extends State<_CartSheet> {
                 children: [
                   Text(
                     item.beverage.name,
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Size: ${item.size} • Đường: $sugarText% • Đá: $iceText%',
-                    style: GoogleFonts.outfit(color: AppTheme.textLight, fontSize: 11),
+                    style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 11),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${item.totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.beVietnamPro(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -1574,7 +1574,7 @@ class _CartSheetState extends State<_CartSheet> {
                       padding: const EdgeInsets.symmetric(horizontal: 10.0),
                       child: Text(
                         '${item.quantity}',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
                     GestureDetector(
@@ -1604,7 +1604,7 @@ class _CartSheetState extends State<_CartSheet> {
                       },
                       child: Text(
                         'Sửa',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           color: AppTheme.primaryColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1616,7 +1616,7 @@ class _CartSheetState extends State<_CartSheet> {
                       onTap: () => _confirmDeleteCartItem(context, index, item.beverage.name),
                       child: Text(
                         'Xóa',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.beVietnamPro(
                           color: Colors.redAccent,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1644,7 +1644,7 @@ class _CartSheetState extends State<_CartSheet> {
           children: [
             Text(
               'Vui lòng xác nhận thông tin nhận hàng của bạn dưới đây.',
-              style: GoogleFonts.outfit(color: AppTheme.textLight, fontSize: 13),
+              style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
             ),
             const SizedBox(height: 20),
 
@@ -1714,7 +1714,7 @@ class _CartSheetState extends State<_CartSheet> {
                 children: [
                   Text(
                     'Đơn hàng bao gồm:',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textDark),
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 8),
                   ..._appState.cartItems.map((item) => Padding(
@@ -1724,11 +1724,11 @@ class _CartSheetState extends State<_CartSheet> {
                           children: [
                             Text(
                               '${item.quantity}x ${item.beverage.name} (${item.size})',
-                              style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textDark),
+                              style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textDark),
                             ),
                             Text(
                               '${item.totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textDark),
+                              style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textDark),
                             ),
                           ],
                         ),
@@ -1742,3 +1742,4 @@ class _CartSheetState extends State<_CartSheet> {
     );
   }
 }
+

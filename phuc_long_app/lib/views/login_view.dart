@@ -120,15 +120,9 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
     } else {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Sai email hoặc mật khẩu. Gợi ý: admin@phuclong.com.vn/admin hoặc user@gmail.com/user';
+        _errorMessage = 'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.';
       });
     }
-  }
-
-  void _fastLogin(String email, String password) {
-    _emailController.text = email;
-    _passwordController.text = password;
-    _submitForm();
   }
 
   @override
@@ -180,7 +174,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                         const SizedBox(height: 12),
                         Text(
                           'Tách trà đậm vị, tách cà phê đậm hương',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 14,
                             color: AppTheme.textLight,
                             fontStyle: FontStyle.italic,
@@ -213,7 +207,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                             children: [
                               Text(
                                 'Đăng Nhập',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.beVietnamPro(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   color: AppTheme.textDark,
@@ -288,7 +282,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                                   },
                                   child: Text(
                                     'Quên mật khẩu?',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.beVietnamPro(
                                       fontSize: 13,
                                       color: AppTheme.primaryColor,
                                       fontWeight: FontWeight.w600,
@@ -301,7 +295,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                                 const SizedBox(height: 12),
                                 Text(
                                   _errorMessage,
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.beVietnamPro(
                                     fontSize: 13,
                                     color: Colors.redAccent,
                                     fontWeight: FontWeight.w500,
@@ -335,7 +329,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                                       )
                                     : Text(
                                         'Đăng Nhập',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.beVietnamPro(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -353,7 +347,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                           children: [
                             Text(
                               'Chưa có tài khoản? ',
-                              style: GoogleFonts.outfit(color: AppTheme.textLight),
+                              style: GoogleFonts.beVietnamPro(color: AppTheme.textLight),
                             ),
                             GestureDetector(
                               onTap: () {
@@ -364,7 +358,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                               },
                               child: Text(
                                 'Đăng ký ngay',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.beVietnamPro(
                                   color: AppTheme.primaryColor,
                                   fontWeight: FontWeight.bold,
                                   decoration: TextDecoration.underline,
@@ -375,57 +369,9 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                         ),
 
                         const SizedBox(height: 36),
-
-                        // Fast Role Access Toggles (User & Admin Presets for testing)
-                        Text(
-                          'Truy cập nhanh để kiểm thử ứng dụng:',
-                          style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textLight,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _fastLogin('user@gmail.com', 'user'),
-                                icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                                label: const Text('Customer Mode'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.primaryColor,
-                                  side: const BorderSide(color: AppTheme.primaryColor),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _fastLogin('admin@phuclong.com.vn', 'admin'),
-                                icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
-                                label: const Text('Admin Mode'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.goldColor,
-                                  side: const BorderSide(color: AppTheme.goldColor),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        const SizedBox(height: 24),
                         Text(
                           '© 2026 Phúc Long Coffee & Tea. All rights reserved.',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.beVietnamPro(
                             fontSize: 11,
                             color: AppTheme.textLight.withOpacity(0.6),
                           ),
@@ -442,3 +388,4 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
     );
   }
 }
+

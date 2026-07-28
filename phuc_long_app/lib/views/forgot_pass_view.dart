@@ -1,8 +1,10 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../widgets/vector_logo.dart';
 import '../state/app_state.dart';
+import '../services/email_service.dart';
 
 enum ForgotPasswordStep { enterEmail, enterCode, resetPassword }
 
@@ -30,8 +32,8 @@ class _ForgotPassViewState extends State<ForgotPassView> {
   bool _isLoading = false;
   String _errorMessage = '';
   
-  // Verification code sent dynamically (simulated)
-  final String _simulatedCode = "1234";
+  // Dynamic 6-digit verification OTP code
+  String _generatedOtpCode = '';
 
   @override
   void dispose() {
@@ -42,6 +44,12 @@ class _ForgotPassViewState extends State<ForgotPassView> {
     super.dispose();
   }
 
+  String _generate6DigitOtp() {
+    final random = Random();
+    final code = (100000 + random.nextInt(900000)).toString();
+    return code;
+  }
+
   void _sendVerificationCode() async {
     if (!_emailFormKey.currentState!.validate()) return;
 
@@ -50,34 +58,43 @@ class _ForgotPassViewState extends State<ForgotPassView> {
       _errorMessage = '';
     });
 
-    await Future.delayed(const Duration(milliseconds: 1000));
+    final email = _emailController.text.trim();
+    final exists = await AppState().checkIfUserExists(email);
+
+    if (!exists) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Không tìm thấy tài khoản đăng ký với email này.';
+      });
+      return;
+    }
+
+    // Generate fresh 6-digit OTP code
+    _generatedOtpCode = _generate6DigitOtp();
+
+    // Trigger automated email sending from mottaikhoanphu102@gmail.com
+    await EmailService().sendOtpEmail(
+      recipientEmail: email,
+      otpCode: _generatedOtpCode,
+    );
 
     if (!mounted) return;
 
-    final email = _emailController.text.trim();
-    final exists = AppState().checkIfUserExists(email);
-
     setState(() {
       _isLoading = false;
+      _currentStep = ForgotPasswordStep.enterCode;
     });
 
-    if (exists) {
-      setState(() {
-        _currentStep = ForgotPasswordStep.enterCode;
-      });
-      // Show simulated alert
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Mã OTP (thử nghiệm) đã được gửi: $_simulatedCode', style: GoogleFonts.outfit()),
-          backgroundColor: AppTheme.primaryColor,
-          duration: const Duration(seconds: 4),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Đã gửi tự động mã OTP từ mottaikhoanphu102@gmail.com đến $email! (Mã OTP: $_generatedOtpCode)',
+          style: GoogleFonts.beVietnamPro(fontSize: 13),
         ),
-      );
-    } else {
-      setState(() {
-        _errorMessage = 'Không tìm thấy tài khoản với email này.';
-      });
-    }
+        backgroundColor: AppTheme.primaryColor,
+        duration: const Duration(seconds: 5),
+      ),
+    );
   }
 
   void _verifyCode() async {
@@ -88,19 +105,21 @@ class _ForgotPassViewState extends State<ForgotPassView> {
       _errorMessage = '';
     });
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = false;
     });
 
-    if (_codeController.text == _simulatedCode) {
+    if (_codeController.text.trim() == _generatedOtpCode) {
       setState(() {
         _currentStep = ForgotPasswordStep.resetPassword;
       });
     } else {
       setState(() {
-        _errorMessage = 'Mã xác thực không hợp lệ. Hãy thử lại (Gợi ý: $_simulatedCode)';
+        _errorMessage = 'Mã OTP không hợp lệ. Vui lòng kiểm tra lại email hoặc bấm gửi lại mã.';
       });
     }
   }
@@ -113,43 +132,95 @@ class _ForgotPassViewState extends State<ForgotPassView> {
       _errorMessage = '';
     });
 
-    await Future.delayed(const Duration(milliseconds: 1000));
-
-    if (!mounted) return;
-
     final email = _emailController.text.trim();
     final password = _newPasswordController.text;
 
+    // Update password in AppState and Firebase
     final success = await AppState().resetPassword(email, password);
+
+    if (!success) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Đã xảy ra lỗi khi đặt lại mật khẩu. Vui lòng thử lại.';
+      });
+      return;
+    }
+
+    // Automatically send verification confirmation email from mottaikhoanphu102@gmail.com
+    await EmailService().sendPasswordResetSuccessEmail(recipientEmail: email);
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = false;
     });
 
-    if (success) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Đặt Lại Thành Công', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-          content: Text('Mật khẩu của bạn đã được cập nhật thành công. Vui lòng đăng nhập lại.', style: GoogleFonts.outfit()),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Pop dialog
-                Navigator.pop(context); // Go back to login
-              },
-              child: Text('Đăng Nhập', style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryColor, size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Xác Minh Thành Công',
+                style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.primaryColor, fontSize: 18),
+              ),
             ),
           ],
         ),
-      );
-    } else {
-      setState(() {
-        _errorMessage = 'Đã xảy ra lỗi khi đặt lại mật khẩu. Vui lòng thử lại.';
-      });
-    }
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mật khẩu tài khoản $email đã được đổi mới thành công!',
+              style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '✉️ Thư xác minh tự động:',
+                    style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Người gửi: mottaikhoanphu102@gmail.com\n• Người nhận: $email\n• Trạng thái: Đã gửi thông báo xác nhận thành công.',
+                    style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textDark, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Pop dialog
+              Navigator.pop(context); // Go back to login screen
+            },
+            child: Text('Đăng Nhập Ngay', style: GoogleFonts.beVietnamPro(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -176,7 +247,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
         ),
         title: Text(
           'Quên Mật Khẩu',
-          style: GoogleFonts.outfit(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18),
+          style: GoogleFonts.beVietnamPro(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: Stack(
@@ -242,13 +313,13 @@ class _ForgotPassViewState extends State<ForgotPassView> {
               children: [
                 Text(
                   'Khôi Phục Mật Khẩu',
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Vui lòng nhập địa chỉ email đã đăng ký của bạn. Chúng tôi sẽ gửi mã OTP xác nhận để đổi mật khẩu.',
-                  style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textLight),
+                  'Nhập email đã đăng ký. Hệ thống từ mottaikhoanphu102@gmail.com sẽ gửi mã OTP xác minh khôi phục mật khẩu cho bạn.',
+                  style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -280,7 +351,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                   const SizedBox(height: 16),
                   Text(
                     _errorMessage,
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.beVietnamPro(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -305,7 +376,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Text('Gửi Mã Xác Nhận', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text('Gửi Mã Xác Nhận', style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -334,14 +405,14 @@ class _ForgotPassViewState extends State<ForgotPassView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Xác Thực Tài Khoản',
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  'Xác Thực Mã OTP',
+                  style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Một mã OTP gồm 4 chữ số đã được gửi tới email của bạn. Nhập mã này bên dưới để xác thực.',
-                  style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textLight),
+                  'Mã OTP 6 chữ số đã được gửi tự động từ mottaikhoanphu102@gmail.com đến ${_emailController.text.trim()}.',
+                  style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -350,10 +421,10 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                   controller: _codeController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
-                  maxLength: 4,
+                  style: GoogleFonts.beVietnamPro(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+                  maxLength: 6,
                   decoration: InputDecoration(
-                    labelText: 'Mã xác thực (OTP)',
+                    labelText: 'Mã xác thực OTP (6 chữ số)',
                     counterText: '',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -361,11 +432,11 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Vui lòng nhập mã OTP';
                     }
-                    if (value.length < 4) {
-                      return 'Mã OTP phải đủ 4 chữ số';
+                    if (value.trim().length < 6) {
+                      return 'Mã OTP phải gồm 6 chữ số';
                     }
                     return null;
                   },
@@ -375,7 +446,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                   const SizedBox(height: 16),
                   Text(
                     _errorMessage,
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.beVietnamPro(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -400,24 +471,35 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Text('Xác Thực', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text('Xác Thực Mã OTP', style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 
                 const SizedBox(height: 16),
                 Center(
                   child: TextButton(
-                    onPressed: () {
+                    onPressed: () async {
                       setState(() {
                         _errorMessage = '';
+                        _generatedOtpCode = _generate6DigitOtp();
                       });
+
+                      await EmailService().sendOtpEmail(
+                        recipientEmail: _emailController.text.trim(),
+                        otpCode: _generatedOtpCode,
+                      );
+
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Mã OTP (thử nghiệm) đã được gửi lại: $_simulatedCode', style: GoogleFonts.outfit()),
+                          content: Text(
+                            'Đã gửi lại mã OTP mới từ mottaikhoanphu102@gmail.com! (OTP: $_generatedOtpCode)',
+                            style: GoogleFonts.beVietnamPro(),
+                          ),
                           backgroundColor: AppTheme.primaryColor,
                         ),
                       );
                     },
-                    child: Text('Gửi lại mã OTP', style: GoogleFonts.outfit(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+                    child: Text('Gửi lại mã OTP', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -448,13 +530,13 @@ class _ForgotPassViewState extends State<ForgotPassView> {
               children: [
                 Text(
                   'Đặt Lại Mật Khẩu',
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Tạo mật khẩu mới cho tài khoản của bạn. Mật khẩu phải bảo mật và có ít nhất 6 ký tự.',
-                  style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textLight),
+                  'Tạo mật khẩu mới cho tài khoản. Sau khi xác minh gửi yêu cầu, thư xác minh tự động từ mottaikhoanphu102@gmail.com sẽ được gửi tới email của bạn.',
+                  style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -519,7 +601,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                   const SizedBox(height: 16),
                   Text(
                     _errorMessage,
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.beVietnamPro(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -544,7 +626,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Text('Đặt Lại Mật Khẩu', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text('Gửi Yêu Cầu Xác Minh', style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

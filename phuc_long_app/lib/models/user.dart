@@ -4,7 +4,7 @@ class UserModel {
   String name;
   String phone;
   String address;
-  final bool isAdmin;
+  bool isAdmin;
 
   UserModel({
     required this.email,
@@ -20,6 +20,7 @@ class UserModel {
     String? name,
     String? phone,
     String? address,
+    bool? isAdmin,
   }) {
     return UserModel(
       email: email,
@@ -27,7 +28,7 @@ class UserModel {
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
-      isAdmin: isAdmin,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }

@@ -24,8 +24,8 @@ class AppTheme {
         surface: cardColor,
       ),
       scaffoldBackgroundColor: backgroundColor,
-      // Đổi font chữ mặc định của toàn app sang Montserrat
-      textTheme: GoogleFonts.montserratTextTheme(
+      // Đổi font chữ mặc định của toàn app sang Be Vietnam Pro
+      textTheme: GoogleFonts.beVietnamProTextTheme(
         TextTheme(
           displayLarge: const TextStyle(
             fontSize: 32,
@@ -79,3 +79,4 @@ class AppTheme {
     );
   }
 }
+

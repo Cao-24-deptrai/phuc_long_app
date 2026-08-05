@@ -104,33 +104,22 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
             slivers: [
               // Custom Header Bar
               SliverAppBar(
-                expandedHeight: 120.0,
-                floating: true,
                 pinned: true,
+                floating: true,
                 backgroundColor: Colors.white,
                 elevation: 0,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                automaticallyImplyLeading: false,
+                titleSpacing: 20,
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const PhucLongLogo(size: 34),
+                    IconButton(
+                      icon: const Icon(Icons.logout_rounded, color: AppTheme.textLight),
+                      onPressed: _handleLogout,
+                      tooltip: 'Đăng xuất',
                     ),
-                    padding: const EdgeInsets.only(left: 20, right: 20, top: 40),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const PhucLongLogo(size: 38),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.logout_rounded, color: AppTheme.textLight),
-                              onPressed: _handleLogout,
-                              tooltip: 'Đăng xuất',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
 
@@ -141,6 +130,102 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // User Greeting Card Header (Xin chào, <username/họ tên>)
+                      Builder(
+                        builder: (context) {
+                          final user = _appState.currentUser;
+                          final displayName = user?.name.isNotEmpty == true 
+                              ? user!.name 
+                              : (user?.username.isNotEmpty == true ? user!.username : 'Khách hàng');
+                          final usernameTag = user?.username.isNotEmpty == true ? '@${user!.username}' : '';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 20.0),
+                            padding: const EdgeInsets.all(16.0),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.primaryColor.withOpacity(0.08),
+                                  AppTheme.goldColor.withOpacity(0.12),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withOpacity(0.15),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.primaryColor.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.person_rounded,
+                                    color: Colors.white,
+                                    size: 26,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Xin chào, ',
+                                            style: GoogleFonts.beVietnamPro(
+                                              fontSize: 15,
+                                              color: AppTheme.textLight,
+                                            ),
+                                          ),
+                                          Flexible(
+                                            child: Text(
+                                              displayName,
+                                              style: GoogleFonts.beVietnamPro(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const Text(' 👋'),
+                                        ],
+                                      ),
+                                      if (usernameTag.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Tên tài khoản: $usernameTag',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.textDark.withOpacity(0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
                       // Search Bar
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1676,10 +1761,13 @@ class _CartSheetState extends State<_CartSheet> {
             // Address Field
             TextFormField(
               controller: _addressController,
-              maxLines: 2,
+              keyboardType: TextInputType.multiline,
+              minLines: 2,
+              maxLines: null,
               decoration: InputDecoration(
                 labelText: 'Địa chỉ giao hàng',
                 prefixIcon: const Icon(Icons.location_on_outlined, color: AppTheme.textLight),
+                alignLabelWithHint: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               validator: (value) {

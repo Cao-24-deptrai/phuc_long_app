@@ -12,20 +12,34 @@ class AppState extends ChangeNotifier {
   factory AppState() => _instance;
 
   AppState._internal() {
-    // Initialise default users
-    _users['user@gmail.com'] = UserModel(
+    // Initialize default users with unique username & display name
+    final defaultUser = UserModel(
+      username: 'khachhang',
       email: 'user@gmail.com',
       password: 'user',
       name: 'Khách hàng Thân thiết',
       phone: '0901234567',
       address: '123 Đường Lê Lợi, Quận 1, TP. HCM',
     );
-    _users['admin@phuclong.com.vn'] = UserModel(
+    final defaultAdmin = UserModel(
+      username: 'admin',
       email: 'admin@phuclong.com.vn',
       password: 'admin',
       name: 'Quản trị viên',
       isAdmin: true,
     );
+    final customUser = UserModel(
+      username: 'itdk',
+      email: 'nubbieim982@gmail.com',
+      password: '123456',
+      name: 'ng le duy khang',
+      phone: '0987654323',
+      address: '2878 phạm thế hiển',
+    );
+
+    _users[defaultUser.email] = defaultUser;
+    _users[defaultAdmin.email] = defaultAdmin;
+    _users[customUser.email] = customUser;
 
     // Initial local fallback data
     _beverages = List.from(mockBeverages);
@@ -91,7 +105,6 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  /// Seed initial beverages into Firestore if collection is empty
   Future<void> _seedBeveragesToFirestore() async {
     try {
       final batch = FirebaseFirestore.instance.batch();
@@ -106,7 +119,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Seed initial promotions into Firestore if collection is empty
   Future<void> _seedPromotionsToFirestore() async {
     try {
       final batch = FirebaseFirestore.instance.batch();
@@ -145,79 +157,156 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Authentication Helpers
-  Future<bool> login(String email, String password) async {
-    final cleanEmail = email.trim().toLowerCase();
-    try {
-      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: cleanEmail,
-        password: password,
-      );
+  /// Check if username is already taken (Unique validation)
+  Future<bool> checkIfUsernameExists(String username) async {
+    final cleanUsername = username.trim().toLowerCase();
+    if (cleanUsername.isEmpty) return false;
 
-      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        final user = UserModel(
-          email: cleanEmail,
-          password: password,
-          name: data['name'] ?? '',
-          phone: data['phone'] ?? '',
-          address: data['address'] ?? '',
-          isAdmin: data['isAdmin'] ?? false,
-        );
-        _currentUser = user;
-        _currentRole = user.isAdmin ? 'admin' : 'user';
-        _users[cleanEmail] = user;
-        notifyListeners();
-        return true;
-      } else {
-        final user = UserModel(
-          email: cleanEmail,
-          password: password,
-          name: userCredential.user?.displayName ?? cleanEmail.split('@')[0],
-          phone: userCredential.user?.phoneNumber ?? '',
-          address: '',
-          isAdmin: false,
-        );
-        _currentUser = user;
-        _currentRole = 'user';
-        _users[cleanEmail] = user;
-        notifyListeners();
+    // Local in-memory check
+    for (var u in _users.values) {
+      if (u.username.toLowerCase() == cleanUsername) {
         return true;
       }
-    } on FirebaseAuthException catch (e) {
-      final user = _users[cleanEmail];
-      if (user != null && user.password == password) {
-        _currentUser = user;
-        _currentRole = user.isAdmin ? 'admin' : 'user';
-        notifyListeners();
-        return true;
-      }
-      debugPrint("Firebase Login Error: ${e.message}");
-      return false;
-    } catch (e) {
-      debugPrint("General Login Error: $e");
-      return false;
     }
+
+    // Firestore query check
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: cleanUsername)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Check Username Exists Error: $e");
+    }
+
+    return false;
   }
 
-  Future<bool> register(String email, String password, String name, String phone, String address) async {
+  /// Login with either Username OR Email
+  Future<bool> login(String input, String password) async {
+    final cleanInput = input.trim().toLowerCase();
+    if (cleanInput.isEmpty || password.isEmpty) return false;
+
+    // 1. Resolve user profile from memory or Firestore by username or email
+    UserModel? user = await findUserByEmail(cleanInput);
+
+    if (user != null) {
+      // Direct local password match check
+      if (user.password == password) {
+        _currentUser = user;
+        _currentRole = user.isAdmin ? 'admin' : 'user';
+        notifyListeners();
+        return true;
+      }
+
+      // Try Firebase Auth using resolved valid email
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: user.email,
+          password: password,
+        );
+        _currentUser = user;
+        _currentRole = user.isAdmin ? 'admin' : 'user';
+        notifyListeners();
+        return true;
+      } on FirebaseAuthException catch (e) {
+        debugPrint("Firebase Auth error for ${user.email}: ${e.message}");
+        if (user.password == password) {
+          _currentUser = user;
+          _currentRole = user.isAdmin ? 'admin' : 'user';
+          notifyListeners();
+          return true;
+        }
+        return false;
+      } catch (e) {
+        debugPrint("Login error: $e");
+        if (user.password == password) {
+          _currentUser = user;
+          _currentRole = user.isAdmin ? 'admin' : 'user';
+          notifyListeners();
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // 2. Direct Firebase Auth login attempt if input is email format
+    if (cleanInput.contains('@')) {
+      try {
+        final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: cleanInput,
+          password: password,
+        );
+        final newUser = UserModel(
+          username: cleanInput.split('@')[0],
+          email: cleanInput,
+          password: password,
+          name: userCredential.user?.displayName ?? cleanInput.split('@')[0],
+          isAdmin: false,
+        );
+        _currentUser = newUser;
+        _currentRole = 'user';
+        _users[cleanInput] = newUser;
+        notifyListeners();
+        return true;
+      } catch (e) {
+        debugPrint("Direct Firebase login error: $e");
+      }
+    }
+
+    return false;
+  }
+
+  /// Register user with unique username, email, password, display name, phone, address
+  Future<bool> register({
+    required String username,
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String address,
+  }) async {
+    final cleanUsername = username.trim().toLowerCase();
     final cleanEmail = email.trim().toLowerCase();
+
+    // Check unique username
+    final usernameExists = await checkIfUsernameExists(cleanUsername);
+    if (usernameExists) {
+      debugPrint("Register Error: Username '$cleanUsername' is already taken.");
+      return false;
+    }
+
     try {
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: cleanEmail,
         password: password,
       );
 
-      await FirebaseFirestore.instance.collection('users').doc(cleanEmail).set({
-        'email': cleanEmail,
-        'name': name,
-        'phone': phone,
-        'address': address,
-        'isAdmin': false,
-      });
-
       final newUser = UserModel(
+        username: cleanUsername,
+        email: cleanEmail,
+        password: password,
+        name: name,
+        phone: phone,
+        address: address,
+        isAdmin: false,
+      );
+
+      await FirebaseFirestore.instance.collection('users').doc(cleanEmail).set(newUser.toMap());
+
+      _users[cleanEmail] = newUser;
+      _currentUser = newUser;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint("Firebase Register Error: $e");
+      // Fallback local memory registration
+      final newUser = UserModel(
+        username: cleanUsername,
         email: cleanEmail,
         password: password,
         name: name,
@@ -226,11 +315,9 @@ class AppState extends ChangeNotifier {
         isAdmin: false,
       );
       _users[cleanEmail] = newUser;
+      _currentUser = newUser;
       notifyListeners();
       return true;
-    } catch (e) {
-      debugPrint("Firebase Register Error: $e");
-      return false;
     }
   }
 
@@ -238,6 +325,7 @@ class AppState extends ChangeNotifier {
     await FirebaseAuth.instance.signOut();
     _currentUser = null;
     _currentRole = 'user';
+    clearCart();
     notifyListeners();
   }
 
@@ -270,10 +358,12 @@ class AppState extends ChangeNotifier {
     final cleanEmail = email.trim().toLowerCase();
 
     if (!_users.containsKey(cleanEmail)) {
+      final fallbackUsername = cleanEmail.split('@')[0];
       _users[cleanEmail] = UserModel(
+        username: fallbackUsername,
         email: cleanEmail,
         password: newPassword,
-        name: cleanEmail.split('@')[0],
+        name: fallbackUsername,
       );
     } else {
       _users[cleanEmail]!.password = newPassword;
@@ -291,6 +381,7 @@ class AppState extends ChangeNotifier {
         await userDoc.update({'password': newPassword});
       } else {
         await userDoc.set({
+          'username': cleanEmail.split('@')[0],
           'email': cleanEmail,
           'password': newPassword,
           'name': cleanEmail.split('@')[0],
@@ -331,35 +422,46 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<bool> checkIfUserExists(String email) async {
-    final cleanEmail = email.trim().toLowerCase();
-    if (_users.containsKey(cleanEmail)) {
-      return true;
+  Future<bool> checkIfUserExists(String input) async {
+    final cleanInput = input.trim().toLowerCase();
+
+    // Check username or email
+    for (var u in _users.values) {
+      if (u.email.toLowerCase() == cleanInput || u.username.toLowerCase() == cleanInput) {
+        return true;
+      }
     }
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanInput).get();
       if (doc.exists) {
         final data = doc.data()!;
-        _users[cleanEmail] = UserModel(
-          email: cleanEmail,
-          password: data['password'] ?? '',
-          name: data['name'] ?? cleanEmail.split('@')[0],
-          phone: data['phone'] ?? '',
-          address: data['address'] ?? '',
-          isAdmin: data['isAdmin'] ?? false,
-        );
+        _users[cleanInput] = UserModel.fromMap(data, cleanInput);
+        return true;
+      }
+
+      final q = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: cleanInput)
+          .limit(1)
+          .get();
+      if (q.docs.isNotEmpty) {
+        final data = q.docs.first.data();
+        final user = UserModel.fromMap(data, data['email'] ?? cleanInput);
+        _users[user.email] = user;
         return true;
       }
     } catch (e) {
       debugPrint("Check User Exists Error: $e");
     }
 
-    if (RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(cleanEmail)) {
-      _users[cleanEmail] = UserModel(
-        email: cleanEmail,
+    if (RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(cleanInput)) {
+      final fallbackUsername = cleanInput.split('@')[0];
+      _users[cleanInput] = UserModel(
+        username: fallbackUsername,
+        email: cleanInput,
         password: '',
-        name: cleanEmail.split('@')[0],
+        name: fallbackUsername,
       );
       return true;
     }
@@ -367,29 +469,60 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  Future<UserModel?> findUserByEmail(String email) async {
-    final cleanEmail = email.trim().toLowerCase();
-    if (_users.containsKey(cleanEmail)) {
-      return _users[cleanEmail];
+  Future<UserModel?> findUserByEmail(String input) async {
+    final cleanInput = input.trim().toLowerCase();
+    if (cleanInput.isEmpty) return null;
+
+    // 1. Check in-memory users map
+    for (var u in _users.values) {
+      if (u.email.toLowerCase() == cleanInput || u.username.toLowerCase() == cleanInput) {
+        return u;
+      }
     }
 
+    // 2. Check Firestore doc by ID (if ID is email)
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        final user = UserModel(
-          email: cleanEmail,
-          password: data['password'] ?? '',
-          name: data['name'] ?? cleanEmail.split('@')[0],
-          phone: data['phone'] ?? '',
-          address: data['address'] ?? '',
-          isAdmin: data['isAdmin'] ?? false,
-        );
-        _users[cleanEmail] = user;
+      final doc = await FirebaseFirestore.instance.collection('users').doc(cleanInput).get();
+      if (doc.exists && doc.data() != null) {
+        final user = UserModel.fromMap(doc.data()!, cleanInput);
+        _users[user.email] = user;
         return user;
       }
     } catch (e) {
-      debugPrint("Find User By Email Error: $e");
+      debugPrint("Doc lookup error: $e");
+    }
+
+    // 3. Query Firestore by username field
+    try {
+      final q = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: cleanInput)
+          .get();
+      if (q.docs.isNotEmpty) {
+        final data = q.docs.first.data();
+        final user = UserModel.fromMap(data, data['email'] ?? q.docs.first.id);
+        _users[user.email] = user;
+        return user;
+      }
+    } catch (e) {
+      debugPrint("Where username error: $e");
+    }
+
+    // 4. Fallback: Scan all users in Firestore collection to guarantee match even if query indexing or casing varies
+    try {
+      final allDocs = await FirebaseFirestore.instance.collection('users').get();
+      for (var d in allDocs.docs) {
+        final data = d.data();
+        final uName = (data['username'] ?? '').toString().trim().toLowerCase();
+        final uEmail = (data['email'] ?? d.id).toString().trim().toLowerCase();
+        if (uName == cleanInput || uEmail == cleanInput) {
+          final user = UserModel.fromMap(data, uEmail);
+          _users[user.email] = user;
+          return user;
+        }
+      }
+    } catch (e) {
+      debugPrint("Scan users collection error: $e");
     }
 
     return null;
@@ -503,7 +636,7 @@ class AppState extends ChangeNotifier {
 
     _appliedPromotion = promo;
     notifyListeners();
-    return null; // Null means success
+    return null;
   }
 
   void removeAppliedPromotion() {
@@ -646,10 +779,33 @@ class AppState extends ChangeNotifier {
   }
 
   // -------------------------------------------------------------
-  // ORDERS STATE & FIRESTORE CRUD
+  // ORDERS STATE & FIRESTORE CRUD (DATA ISOLATION PER USER)
   // -------------------------------------------------------------
   List<Order> _orders = [];
-  List<Order> get orders => _orders;
+
+  List<Order> get orders {
+    if (_currentRole == 'admin') {
+      return _orders;
+    }
+
+    final email = _currentUser?.email.trim().toLowerCase() ?? '';
+    final uname = _currentUser?.username.trim().toLowerCase() ?? '';
+    final name = _currentUser?.name.trim().toLowerCase() ?? '';
+
+    return _orders.where((o) {
+      final oEmail = o.userEmail.trim().toLowerCase();
+      final oName = o.customerName.trim().toLowerCase();
+      if (oEmail.isNotEmpty && (oEmail == email || oEmail == uname)) {
+        return true;
+      }
+      if (name.isNotEmpty && oName == name) {
+        return true;
+      }
+      return false;
+    }).toList();
+  }
+
+  List<Order> get allOrdersForAdmin => _orders;
 
   Future<void> placeOrder(String name, String phone, String address) async {
     if (_cartItems.isEmpty) return;
@@ -658,9 +814,11 @@ class AppState extends ChangeNotifier {
     final appliedPromo = _appliedPromotion;
     final finalDiscount = discountAmount;
     final finalTotal = cartFinalTotal;
+    final userEmail = _currentUser?.email ?? '';
 
     final newOrder = Order(
       id: orderId,
+      userEmail: userEmail,
       items: List.from(_cartItems),
       total: finalTotal,
       discountAmount: finalDiscount,

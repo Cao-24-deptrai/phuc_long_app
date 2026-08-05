@@ -217,6 +217,7 @@ class CartItem {
 
 class Order {
   final String id;
+  final String userEmail; // Associated user email/username for data isolation
   final List<CartItem> items;
   final double total;
   final double discountAmount;
@@ -229,6 +230,7 @@ class Order {
 
   Order({
     required this.id,
+    this.userEmail = '',
     required this.items,
     required this.total,
     this.discountAmount = 0.0,
@@ -243,6 +245,7 @@ class Order {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userEmail': userEmail,
       'items': items.map((item) => item.toMap()).toList(),
       'total': total,
       'discountAmount': discountAmount,
@@ -272,6 +275,7 @@ class Order {
 
     return Order(
       id: map['id'] ?? docId,
+      userEmail: map['userEmail'] ?? '',
       items: itemList,
       total: (map['total'] ?? 0.0).toDouble(),
       discountAmount: (map['discountAmount'] ?? 0.0).toDouble(),

@@ -232,6 +232,22 @@ class _ProfileViewState extends State<ProfileView> {
                           color: AppTheme.textDark,
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '@${user.username}',
+                          style: GoogleFonts.beVietnamPro(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         user.email,
@@ -260,6 +276,25 @@ class _ProfileViewState extends State<ProfileView> {
                                 ),
                               ),
                               const Divider(height: 24, color: AppTheme.dividerColor),
+
+                              // Username (Unique handle - Read only)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryColor, size: 22),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Tên đăng nhập', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                                        const SizedBox(height: 2),
+                                        Text('@${user.username}', style: GoogleFonts.beVietnamPro(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
 
                               // Name field (view or edit)
                               _buildProfileField(
@@ -292,7 +327,9 @@ class _ProfileViewState extends State<ProfileView> {
                                 controller: _addressController,
                                 icon: Icons.location_on_outlined,
                                 isEditable: _isEditing,
-                                maxLines: 2,
+                                keyboardType: TextInputType.multiline,
+                                minLines: 2,
+                                maxLines: null,
                               ),
                               
                               if (_isEditing) ...[
@@ -353,7 +390,8 @@ class _ProfileViewState extends State<ProfileView> {
     required IconData icon,
     bool isEditable = false,
     TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
+    int? minLines,
+    int? maxLines = 1,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -390,10 +428,12 @@ class _ProfileViewState extends State<ProfileView> {
           TextFormField(
             controller: controller,
             keyboardType: keyboardType,
+            minLines: minLines,
             maxLines: maxLines,
             style: GoogleFonts.beVietnamPro(fontSize: 15, color: AppTheme.textDark),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: AppTheme.primaryColor),
+              alignLabelWithHint: minLines != null,
               contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),

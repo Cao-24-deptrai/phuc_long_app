@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/beverage.dart';
@@ -6,6 +7,7 @@ import '../models/user.dart';
 import '../models/promotion.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
+import '../widgets/currency_formatter.dart';
 import 'login_view.dart';
 
 class AdminView extends StatefulWidget {
@@ -106,6 +108,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     return Scaffold(
       appBar: AppBar(
         title: const PhucLongLogo(size: 34),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppTheme.textLight),
@@ -118,14 +121,16 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           labelColor: AppTheme.primaryColor,
           unselectedLabelColor: AppTheme.textLight,
           indicatorColor: AppTheme.primaryColor,
-          isScrollable: true,
-          labelStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12),
+          indicatorWeight: 3,
+          isScrollable: false,
+          labelPadding: EdgeInsets.zero,
+          labelStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 11),
           tabs: const [
-            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Thống Kê'),
-            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Đơn Hàng'),
-            Tab(icon: Icon(Icons.local_drink_outlined), text: 'Sản Phẩm'),
-            Tab(icon: Icon(Icons.local_offer_outlined), text: 'Khuyến Mãi'),
-            Tab(icon: Icon(Icons.admin_panel_settings_outlined), text: 'Phân Quyền'),
+            Tab(icon: Icon(Icons.dashboard_outlined, size: 20), text: 'Thống Kê'),
+            Tab(icon: Icon(Icons.receipt_long_outlined, size: 20), text: 'Đơn Hàng'),
+            Tab(icon: Icon(Icons.local_drink_outlined, size: 20), text: 'Sản Phẩm'),
+            Tab(icon: Icon(Icons.local_offer_outlined, size: 20), text: 'Khuyến Mãi'),
+            Tab(icon: Icon(Icons.admin_panel_settings_outlined, size: 20), text: 'Phân Quyền'),
           ],
         ),
       ),
@@ -162,9 +167,9 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
   // TAB 1: DASHBOARD & ANALYTICS
   Widget _buildDashboardTab() {
-    final completedOrders = _appState.orders.where((o) => o.status == 'Đã hoàn thành').toList();
+    final completedOrders = _appState.allOrdersForAdmin.where((o) => o.status == 'Đã hoàn thành').toList();
     final double totalRevenue = completedOrders.fold(0.0, (sum, o) => sum + o.total);
-    final pendingOrdersCount = _appState.orders.where((o) => o.status == 'Chờ xử lý' || o.status == 'Đang xử lý' || o.status == 'Đang chuẩn bị').length;
+    final pendingOrdersCount = _appState.allOrdersForAdmin.where((o) => o.status == 'Chờ xử lý' || o.status == 'Đang xử lý' || o.status == 'Đang chuẩn bị').length;
     final totalProducts = _appState.allBeveragesForAdmin.length;
     final totalPromos = _appState.allPromotionsForAdmin.length;
 
@@ -364,7 +369,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
   // TAB 2: ORDERS MANAGEMENT
   Widget _buildOrdersTab() {
-    final orders = _appState.orders;
+    final orders = _appState.allOrdersForAdmin;
     if (orders.isEmpty) {
       return Center(
         child: Column(
@@ -629,7 +634,10 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -639,45 +647,66 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                             ),
                             child: Text(
                               promo.code,
-                              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryColor),
+                              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.primaryColor),
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Text(
                             'Giảm $discountStr',
-                            style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.deepOrangeAccent),
+                            style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.deepOrangeAccent),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(promo.title, style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textDark)),
+                      Text(
+                        promo.title,
+                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textDark),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 2),
-                      Text(promo.description, style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(
+                        promo.description,
+                        style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
 
-                // Switch status
-                Switch(
-                  value: promo.isAvailable,
-                  activeColor: AppTheme.primaryColor,
-                  onChanged: (val) {
-                    _appState.togglePromotionAvailability(promo.id);
-                  },
-                ),
-
-                // Edit
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: AppTheme.textLight),
-                  onPressed: () => _showEditPromotionDialog(promo),
-                ),
-
-                // Delete
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                  onPressed: () {
-                    _appState.deletePromotion(promo.id);
-                  },
+                // Action Buttons Group
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: promo.isAvailable,
+                        activeColor: AppTheme.primaryColor,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (val) {
+                          _appState.togglePromotionAvailability(promo.id);
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                      icon: const Icon(Icons.edit_outlined, color: AppTheme.textLight, size: 18),
+                      onPressed: () => _showEditPromotionDialog(promo),
+                      tooltip: 'Sửa',
+                    ),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                      onPressed: () {
+                        _appState.deletePromotion(promo.id);
+                      },
+                      tooltip: 'Xóa',
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -942,7 +971,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   // Dialog to Edit Product details
   void _showEditProductDialog(Beverage beverage) {
     final nameController = TextEditingController(text: beverage.name);
-    final priceController = TextEditingController(text: beverage.price.toStringAsFixed(0));
+    final priceController = TextEditingController(text: CurrencyInputFormatter.format(beverage.price));
     final descController = TextEditingController(text: beverage.description);
 
     showDialog(
@@ -961,13 +990,22 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               TextField(
                 controller: priceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Giá bán (đ)'),
+                inputFormatters: [CurrencyInputFormatter()],
+                decoration: const InputDecoration(
+                  labelText: 'Giá bán',
+                  suffixText: 'đ',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Mô tả ngắn'),
+                keyboardType: TextInputType.multiline,
+                minLines: 3,
+                maxLines: null,
+                decoration: const InputDecoration(
+                  labelText: 'Mô tả chi tiết',
+                  alignLabelWithHint: true,
+                ),
               ),
             ],
           ),
@@ -979,7 +1017,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           ),
           TextButton(
             onPressed: () {
-              final newPrice = double.tryParse(priceController.text) ?? beverage.price;
+              final newPrice = CurrencyInputFormatter.parse(priceController.text, defaultValue: beverage.price);
               final updated = beverage.copyWith(
                 name: nameController.text.trim(),
                 price: newPrice,
@@ -1020,7 +1058,12 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 TextField(
                   controller: priceController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Giá bán (đ)'),
+                  inputFormatters: [CurrencyInputFormatter()],
+                  decoration: const InputDecoration(
+                    labelText: 'Giá bán',
+                    hintText: 'Ví dụ: 55.000',
+                    suffixText: 'đ',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<BeverageCategory>(
@@ -1043,8 +1086,13 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Mô tả thành phần'),
+                  keyboardType: TextInputType.multiline,
+                  minLines: 3,
+                  maxLines: null,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả thành phần',
+                    alignLabelWithHint: true,
+                  ),
                 ),
               ],
             ),
@@ -1058,7 +1106,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               onPressed: () {
                 if (nameController.text.trim().isEmpty || priceController.text.trim().isEmpty) return;
 
-                final price = double.tryParse(priceController.text) ?? 50000;
+                final price = CurrencyInputFormatter.parse(priceController.text, defaultValue: 50000);
                 final newBeverage = Beverage(
                   id: 'PL-${DateTime.now().millisecondsSinceEpoch}',
                   name: nameController.text.trim(),
@@ -1106,7 +1154,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 TextField(
                   controller: codeController,
                   textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(labelText: 'Mã Voucher (VD: PHUCLONG10)'),
+                  decoration: const InputDecoration(labelText: 'Mã Voucher'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -1118,13 +1166,14 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   value: discountType,
                   decoration: const InputDecoration(labelText: 'Loại giảm giá'),
                   items: const [
-                    DropdownMenuItem(value: 'percent', child: Text('Theo % phần trăm')),
-                    DropdownMenuItem(value: 'amount', child: Text('Theo số tiền cụ thể (VNĐ)')),
+                    DropdownMenuItem(value: 'percent', child: Text('Theo phần trăm')),
+                    DropdownMenuItem(value: 'amount', child: Text('Theo số tiền cụ thể')),
                   ],
                   onChanged: (val) {
                     if (val != null) {
                       setDialogState(() {
                         discountType = val;
+                        discountValController.clear();
                       });
                     }
                   },
@@ -1133,21 +1182,32 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 TextField(
                   controller: discountValController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: discountType == 'amount' ? [CurrencyInputFormatter()] : [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
-                    labelText: discountType == 'percent' ? 'Mức giảm (%)' : 'Mức giảm (VNĐ)',
+                    labelText: discountType == 'percent' ? 'Mức giảm phần trăm' : 'Mức giảm tiền mặt',
+                    suffixText: discountType == 'percent' ? '%' : 'đ',
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: minPriceController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Giá trị đơn tối thiểu (VNĐ)'),
+                  inputFormatters: [CurrencyInputFormatter()],
+                  decoration: const InputDecoration(
+                    labelText: 'Giá trị đơn tối thiểu',
+                    suffixText: 'đ',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Mô tả chi tiết điều kiện'),
+                  keyboardType: TextInputType.multiline,
+                  minLines: 3,
+                  maxLines: null,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả chi tiết điều kiện',
+                    alignLabelWithHint: true,
+                  ),
                 ),
               ],
             ),
@@ -1161,8 +1221,8 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               onPressed: () {
                 final code = codeController.text.trim().toUpperCase();
                 final title = titleController.text.trim();
-                final val = double.tryParse(discountValController.text) ?? 0;
-                final minP = double.tryParse(minPriceController.text) ?? 0;
+                final val = CurrencyInputFormatter.parse(discountValController.text);
+                final minP = CurrencyInputFormatter.parse(minPriceController.text);
 
                 if (code.isEmpty || title.isEmpty || val <= 0) return;
 
@@ -1193,8 +1253,10 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   void _showEditPromotionDialog(Promotion promo) {
     final titleController = TextEditingController(text: promo.title);
     final descController = TextEditingController(text: promo.description);
-    final discountValController = TextEditingController(text: promo.discountValue.toStringAsFixed(0));
-    final minPriceController = TextEditingController(text: promo.minOrderPrice.toStringAsFixed(0));
+    final discountValController = TextEditingController(
+      text: promo.discountType == 'amount' ? CurrencyInputFormatter.format(promo.discountValue) : promo.discountValue.toStringAsFixed(0),
+    );
+    final minPriceController = TextEditingController(text: CurrencyInputFormatter.format(promo.minOrderPrice));
 
     showDialog(
       context: context,
@@ -1212,21 +1274,32 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               TextField(
                 controller: discountValController,
                 keyboardType: TextInputType.number,
+                inputFormatters: promo.discountType == 'amount' ? [CurrencyInputFormatter()] : [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
-                  labelText: promo.discountType == 'percent' ? 'Mức giảm (%)' : 'Mức giảm (VNĐ)',
+                  labelText: promo.discountType == 'percent' ? 'Mức giảm phần trăm' : 'Mức giảm tiền mặt',
+                  suffixText: promo.discountType == 'percent' ? '%' : 'đ',
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: minPriceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Giá trị đơn tối thiểu (VNĐ)'),
+                inputFormatters: [CurrencyInputFormatter()],
+                decoration: const InputDecoration(
+                  labelText: 'Giá trị đơn tối thiểu',
+                  suffixText: 'đ',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
-                maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Mô tả chi tiết'),
+                keyboardType: TextInputType.multiline,
+                minLines: 3,
+                maxLines: null,
+                decoration: const InputDecoration(
+                  labelText: 'Mô tả chi tiết',
+                  alignLabelWithHint: true,
+                ),
               ),
             ],
           ),
@@ -1238,8 +1311,8 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           ),
           TextButton(
             onPressed: () {
-              final val = double.tryParse(discountValController.text) ?? promo.discountValue;
-              final minP = double.tryParse(minPriceController.text) ?? promo.minOrderPrice;
+              final val = CurrencyInputFormatter.parse(discountValController.text, defaultValue: promo.discountValue);
+              final minP = CurrencyInputFormatter.parse(minPriceController.text, defaultValue: promo.minOrderPrice);
               final updated = promo.copyWith(
                 title: titleController.text.trim(),
                 description: descController.text.trim(),

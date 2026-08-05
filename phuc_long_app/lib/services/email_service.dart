@@ -48,7 +48,7 @@ class EmailService {
                 'otpCode': otpCode,
               }),
             )
-            .timeout(const Duration(seconds: 2));
+            .timeout(const Duration(seconds: 10));
 
         if (response.statusCode == 200) {
           debugPrint('✅ REST API Success ($baseUrl): Email OTP sent via Backend Node.js Server to $cleanEmail');

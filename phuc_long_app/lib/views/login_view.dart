@@ -99,12 +99,12 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
   }
 
   void _submitForm() async {
-    final email = _emailController.text.trim().toLowerCase();
+    final input = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
+    if (input.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Vui lòng điền đầy đủ thông tin đăng nhập.';
+        _errorMessage = 'Vui lòng điền Tên đăng nhập / Email và Mật khẩu.';
       });
       return;
     }
@@ -114,13 +114,13 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
       _errorMessage = '';
     });
 
-    final success = await AppState().login(email, password);
+    final success = await AppState().login(input, password);
     if (success) {
       _handleLogin(AppState().currentRole);
     } else {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.';
+        _errorMessage = 'Tên đăng nhập / Email hoặc Mật khẩu không chính xác.';
       });
     }
   }
@@ -216,14 +216,14 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                               ),
                               const SizedBox(height: 24),
                               
-                              // Email Field
+                              // Email or Username Field
                               TextField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
-                                  labelText: 'Địa chỉ Email',
-                                  hintText: 'user@gmail.com hoặc admin@phuclong.com.vn',
-                                  prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textLight),
+                                  labelText: 'Tên đăng nhập hoặc Email',
+                                  hintText: 'khachhang, admin hoặc user@gmail.com',
+                                  prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryColor),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: const BorderSide(color: AppTheme.dividerColor),

@@ -88,7 +88,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Đã gửi tự động mã OTP từ mottaikhoanphu102@gmail.com đến $email! (Mã OTP: $_generatedOtpCode)',
+          'Đã gửi mã OTP xác nhận đến $email! Vui lòng kiểm tra hòm thư của bạn.',
           style: GoogleFonts.beVietnamPro(fontSize: 13),
         ),
         backgroundColor: AppTheme.primaryColor,
@@ -492,7 +492,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Đã gửi lại mã OTP mới từ mottaikhoanphu102@gmail.com! (OTP: $_generatedOtpCode)',
+                            'Đã gửi lại mã OTP mới đến ${_emailController.text.trim()}! Vui lòng kiểm tra hòm thư.',
                             style: GoogleFonts.beVietnamPro(),
                           ),
                           backgroundColor: AppTheme.primaryColor,

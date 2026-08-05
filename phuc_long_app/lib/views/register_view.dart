@@ -13,6 +13,7 @@ class RegisterView extends StatefulWidget {
 
 class _RegisterViewState extends State<RegisterView> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -27,6 +28,7 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -44,37 +46,51 @@ class _RegisterViewState extends State<RegisterView> {
       _errorMessage = '';
     });
 
-    // Simulate delay
-    await Future.delayed(const Duration(milliseconds: 1000));
-
-    if (!mounted) return;
-
+    final username = _usernameController.text.trim();
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
     final address = _addressController.text.trim();
     final password = _passwordController.text;
 
-    final success = await AppState().register(email, password, name, phone, address);
+    // Check unique username
+    final usernameExists = await AppState().checkIfUsernameExists(username);
+    if (usernameExists) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Tên đăng nhập "$username" đã tồn tại. Vui lòng chọn tên khác!';
+      });
+      return;
+    }
+
+    final success = await AppState().register(
+      username: username,
+      email: email,
+      password: password,
+      name: name,
+      phone: phone,
+      address: address,
+    );
 
     setState(() {
       _isLoading = false;
     });
 
+    if (!mounted) return;
+
     if (success) {
-      // Show success dialog
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text('Đăng Ký Thành Công', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-          content: Text('Tài khoản của bạn đã được khởi tạo thành công. Bạn có thể sử dụng email này để đăng nhập ngay bây giờ.', style: GoogleFonts.beVietnamPro()),
+          content: Text('Tài khoản "@$username" của bạn đã được khởi tạo thành công. Bạn có thể đăng nhập bằng Tên đăng nhập hoặc Email ngay bây giờ.', style: GoogleFonts.beVietnamPro()),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Pop dialog
-                Navigator.pop(context); // Go back to login
+                Navigator.pop(context);
+                Navigator.pop(context);
               },
               child: Text('Đăng Nhập Ngay', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
             ),
@@ -83,7 +99,7 @@ class _RegisterViewState extends State<RegisterView> {
       );
     } else {
       setState(() {
-        _errorMessage = 'Email này đã được sử dụng bởi một tài khoản khác.';
+        _errorMessage = 'Email hoặc Tên đăng nhập này đã được sử dụng bởi tài khoản khác.';
       });
     }
   }
@@ -103,7 +119,6 @@ class _RegisterViewState extends State<RegisterView> {
       ),
       body: Stack(
         children: [
-          // Background subtle green patterns
           Positioned(
             top: -100,
             right: -100,
@@ -116,7 +131,6 @@ class _RegisterViewState extends State<RegisterView> {
               ),
             ),
           ),
-          
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -128,7 +142,7 @@ class _RegisterViewState extends State<RegisterView> {
                     children: [
                       const Center(child: PhucLongLogo(size: 60)),
                       const SizedBox(height: 32),
-                      
+
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -160,7 +174,34 @@ class _RegisterViewState extends State<RegisterView> {
                             ),
                             const SizedBox(height: 20),
 
-                            // Name Field
+                            // Username Field (Unique)
+                            TextFormField(
+                              controller: _usernameController,
+                              keyboardType: TextInputType.text,
+                              decoration: InputDecoration(
+                                labelText: 'Tên đăng nhập *',
+                                prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryColor),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: AppTheme.dividerColor),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Vui lòng nhập tên đăng nhập';
+                                }
+                                if (value.trim().contains(' ')) {
+                                  return 'Tên đăng nhập không được chứa khoảng trắng';
+                                }
+                                if (value.trim().length < 3) {
+                                  return 'Tên đăng nhập phải ít nhất 3 ký tự';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Name Field (Display Name / Họ và tên)
                             TextFormField(
                               controller: _nameController,
                               keyboardType: TextInputType.name,
@@ -225,10 +266,13 @@ class _RegisterViewState extends State<RegisterView> {
                             // Address Field
                             TextFormField(
                               controller: _addressController,
-                              keyboardType: TextInputType.streetAddress,
+                              keyboardType: TextInputType.multiline,
+                              minLines: 2,
+                              maxLines: null,
                               decoration: InputDecoration(
                                 labelText: 'Địa chỉ giao hàng',
                                 prefixIcon: const Icon(Icons.location_on_outlined, color: AppTheme.textLight),
+                                alignLabelWithHint: true,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(color: AppTheme.dividerColor),
@@ -342,7 +386,7 @@ class _RegisterViewState extends State<RegisterView> {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -376,4 +420,3 @@ class _RegisterViewState extends State<RegisterView> {
     );
   }
 }
-

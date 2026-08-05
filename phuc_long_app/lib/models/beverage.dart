@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum BeverageCategory { all, tea, milkTea, coffee, special }
 
@@ -47,6 +47,47 @@ class Beverage {
       rating: rating ?? this.rating,
       isPopular: isPopular ?? this.isPopular,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category.name,
+      'price': price,
+      'imageUrl': imageUrl,
+      'description': description,
+      'isAvailable': isAvailable,
+      'rating': rating,
+      'isPopular': isPopular,
+    };
+  }
+
+  factory Beverage.fromMap(Map<String, dynamic> map, String docId) {
+    BeverageCategory cat = BeverageCategory.all;
+    final catStr = map['category'] ?? '';
+    for (var c in BeverageCategory.values) {
+      if (c.name == catStr) {
+        cat = c;
+        break;
+      }
+    }
+    return Beverage(
+      id: map['id'] ?? docId,
+      name: map['name'] ?? '',
+      category: cat,
+      price: (map['price'] ?? 0.0).toDouble(),
+      imageUrl: map['imageUrl'] ?? '',
+      description: map['description'] ?? '',
+      isAvailable: map['isAvailable'] ?? true,
+      rating: (map['rating'] ?? 4.5).toDouble(),
+      isPopular: map['isPopular'] ?? false,
+    );
+  }
+
+  factory Beverage.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return Beverage.fromMap(data, doc.id);
   }
 }
 
@@ -151,12 +192,35 @@ class CartItem {
     if (size == 'S') basePrice -= 5000;
     return basePrice * quantity;
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'beverage': beverage.toMap(),
+      'quantity': quantity,
+      'size': size,
+      'sugar': sugar,
+      'ice': ice,
+    };
+  }
+
+  factory CartItem.fromMap(Map<String, dynamic> map) {
+    final bevData = map['beverage'] as Map<String, dynamic>? ?? {};
+    return CartItem(
+      beverage: Beverage.fromMap(bevData, bevData['id'] ?? ''),
+      quantity: map['quantity'] ?? 1,
+      size: map['size'] ?? 'M',
+      sugar: (map['sugar'] ?? 1.0).toDouble(),
+      ice: (map['ice'] ?? 1.0).toDouble(),
+    );
+  }
 }
 
 class Order {
   final String id;
   final List<CartItem> items;
   final double total;
+  final double discountAmount;
+  final String promoCode;
   final DateTime date;
   final String customerName;
   final String customerPhone;
@@ -167,11 +231,61 @@ class Order {
     required this.id,
     required this.items,
     required this.total,
+    this.discountAmount = 0.0,
+    this.promoCode = '',
     required this.date,
     required this.customerName,
     required this.customerPhone,
     required this.customerAddress,
     this.status = 'Chờ xử lý',
   });
-}
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'items': items.map((item) => item.toMap()).toList(),
+      'total': total,
+      'discountAmount': discountAmount,
+      'promoCode': promoCode,
+      'date': Timestamp.fromDate(date),
+      'customerName': customerName,
+      'customerPhone': customerPhone,
+      'customerAddress': customerAddress,
+      'status': status,
+    };
+  }
+
+  factory Order.fromMap(Map<String, dynamic> map, String docId) {
+    DateTime orderDate = DateTime.now();
+    if (map['date'] != null) {
+      if (map['date'] is Timestamp) {
+        orderDate = (map['date'] as Timestamp).toDate();
+      } else if (map['date'] is String) {
+        orderDate = DateTime.tryParse(map['date']) ?? DateTime.now();
+      }
+    }
+
+    final rawItems = map['items'] as List<dynamic>? ?? [];
+    final itemList = rawItems
+        .map((itemMap) => CartItem.fromMap(itemMap as Map<String, dynamic>))
+        .toList();
+
+    return Order(
+      id: map['id'] ?? docId,
+      items: itemList,
+      total: (map['total'] ?? 0.0).toDouble(),
+      discountAmount: (map['discountAmount'] ?? 0.0).toDouble(),
+      promoCode: map['promoCode'] ?? '',
+      date: orderDate,
+      customerName: map['customerName'] ?? '',
+      customerPhone: map['customerPhone'] ?? '',
+      customerAddress: map['customerAddress'] ?? '',
+      status: map['status'] ?? 'Chờ xử lý',
+    );
+  }
+
+  factory Order.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return Order.fromMap(data, doc.id);
+  }
+}

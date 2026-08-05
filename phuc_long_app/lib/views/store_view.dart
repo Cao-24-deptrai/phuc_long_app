@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/beverage.dart';
+import '../models/promotion.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import '../widgets/shimmer_banner.dart';
@@ -94,70 +95,32 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final cartItemCount = _appState.cartItems.fold<int>(0, (sum, item) => sum + item.quantity);
-    
+
     return Scaffold(
       body: Stack(
         children: [
-          SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // Top Custom AppBar
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Custom Header Bar
+              SliverAppBar(
+                expandedHeight: 120.0,
+                floating: true,
+                pinned: true,
+                backgroundColor: Colors.white,
+                elevation: 0,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                    ),
+                    padding: const EdgeInsets.only(left: 20, right: 20, top: 40),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const PhucLongLogo(size: 40),
+                        const PhucLongLogo(size: 38),
                         Row(
                           children: [
-                            // Cart button
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.shopping_bag_outlined, color: AppTheme.primaryColor, size: 28),
-                                  onPressed: _showCartSheet,
-                                ),
-                                if (cartItemCount > 0)
-                                  Positioned(
-                                    right: 6,
-                                    top: 6,
-                                    child: TweenAnimationBuilder<double>(
-                                      tween: Tween(begin: 0.0, end: 1.0),
-                                      duration: const Duration(milliseconds: 300),
-                                      builder: (context, value, child) {
-                                        return Transform.scale(
-                                          scale: value,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: const BoxDecoration(
-                                              color: AppTheme.goldColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            constraints: const BoxConstraints(
-                                              minWidth: 18,
-                                              minHeight: 18,
-                                            ),
-                                            child: Text(
-                                              '$cartItemCount',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            // Log out / Role switcher
                             IconButton(
                               icon: const Icon(Icons.logout_rounded, color: AppTheme.textLight),
                               onPressed: _handleLogout,
@@ -169,252 +132,185 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                     ),
                   ),
                 ),
+              ),
 
-                // Welcome message & Search
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            style: GoogleFonts.beVietnamPro(fontSize: 24, color: AppTheme.textDark),
-                            children: [
-                              const TextSpan(text: 'Chào bạn, '),
-                              TextSpan(
-                                text: _appState.currentUser != null
-                                    ? '${_appState.currentUser!.name}! 👋'
-                                    : 'Thưởng thức trà ngay! 👋',
-                                style: GoogleFonts.beVietnamPro(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                            ],
+              // Search Box & Banner Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Search Bar
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.backgroundColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.dividerColor),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val;
+                            });
+                          },
+                          style: GoogleFonts.beVietnamPro(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Tìm kiếm trà, trà sữa, cà phê...',
+                            hintStyle: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
+                            icon: const Icon(Icons.search_rounded, color: AppTheme.primaryColor),
+                            border: InputBorder.none,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        
-                        // Search Bar
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.dividerColor),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.01),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'Tìm kiếm thức uống yêu thích...',
-                              hintStyle: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 14),
-                              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textLight),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear_rounded, color: AppTheme.textLight),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() {
-                                          _searchQuery = '';
-                                        });
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Shimmer Carousel Banner
+                      ShimmerBanner(
+                        title: 'ƯU ĐÃI THÀNH VIÊN',
+                        subtitle: 'Thưởng thức Trà & Cà phê Phúc Long với ưu đãi đặc biệt hôm nay',
+                        buttonText: 'Khám phá ngay',
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Category Tabs
+                      Text(
+                        'Danh Mục Thực Đơn',
+                        style: GoogleFonts.beVietnamPro(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: [
+                            _buildCategoryChip(BeverageCategory.all, 'Tất cả 🍃'),
+                            _buildCategoryChip(BeverageCategory.tea, 'Trà Trứ Danh 🍵'),
+                            _buildCategoryChip(BeverageCategory.milkTea, 'Trà Sữa 🧋'),
+                            _buildCategoryChip(BeverageCategory.coffee, 'Cà Phê ☕'),
+                            _buildCategoryChip(BeverageCategory.special, 'Đặc Sản 🌟'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Beverage Grid List
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                sliver: _filteredBeverages.isEmpty
+                    ? SliverToBoxAdapter(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(40.0),
+                            child: Column(
+                              children: [
+                                const Icon(Icons.no_drinks_outlined, size: 48, color: AppTheme.textLight),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Không tìm thấy thức uống phù hợp',
+                                  style: GoogleFonts.beVietnamPro(color: AppTheme.textLight),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Shimmer Glowing Banner
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
-                    child: ShimmerBanner(
-                      title: 'Ủ Vị Tâm Giao',
-                      subtitle: 'Ưu đãi trà đào tươi mát giảm ngay 20%',
-                      buttonText: 'Thử ngay',
-                      onTap: () {
-                        // Find Peach tea (id: '1') and open its details
-                        final peachTea = _appState.beverages.firstWhere((b) => b.id == '1');
-                        _showBeverageDetails(peachTea);
-                      },
-                    ),
-                  ),
-                ),
-
-                // Categories Selector Header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text(
-                      'Danh mục sản phẩm',
-                      style: GoogleFonts.beVietnamPro(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Categories Selector Chips (Animated Sliding Indicator behavior)
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 52,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: [
-                        _buildCategoryChip(BeverageCategory.all, 'Tất cả'),
-                        _buildCategoryChip(BeverageCategory.tea, 'Trà Đậm Vị'),
-                        _buildCategoryChip(BeverageCategory.milkTea, 'Trà Sữa Béo'),
-                        _buildCategoryChip(BeverageCategory.coffee, 'Cà Phê Nguyên Bản'),
-                        _buildCategoryChip(BeverageCategory.special, 'Món Đặc Biệt'),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Beverage Grid List with entrance animation
-                _filteredBeverages.isEmpty
-                    ? SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.coffee_rounded, size: 64, color: AppTheme.textLight),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Không tìm thấy thức uống nào phù hợp.',
-                                style: GoogleFonts.beVietnamPro(color: AppTheme.textLight),
-                              ),
-                            ],
-                          ),
-                        ),
                       )
-                    : SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        sliver: SliverGrid(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.72,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final beverage = _filteredBeverages[index];
-                              return _BeverageCard(
-                                beverage: beverage,
-                                onTap: () => _showBeverageDetails(beverage),
-                              );
-                            },
-                            childCount: _filteredBeverages.length,
-                          ),
+                    : SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final beverage = _filteredBeverages[index];
+                            return _buildBeverageCard(beverage);
+                          },
+                          childCount: _filteredBeverages.length,
                         ),
                       ),
-                
-                // Extra bottom padding
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 90),
-                )
-              ],
-            ),
+              ),
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 100),
+              ),
+            ],
           ),
 
-          // Custom Bottom Cart Indicator (Floating bar at the bottom)
+          // Floating Cart Button Bar
           if (cartItemCount > 0)
             Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: TweenAnimationBuilder<Offset>(
-                tween: Tween(begin: const Offset(0, 1.2), end: Offset.zero),
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.fastOutSlowIn,
-                builder: (context, offset, child) {
-                  return FractionalTranslation(
-                    translation: offset,
-                    child: Material(
-                      elevation: 8,
-                      shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-                      color: AppTheme.primaryColor,
+              left: 20,
+              right: 20,
+              bottom: 24,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
+                child: ElevatedButton(
+                  onPressed: _showCartSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        onTap: _showCartSheet,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 24),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '$cartItemCount sản phẩm',
-                                        style: GoogleFonts.beVietnamPro(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Xem chi tiết giỏ hàng',
-                                        style: GoogleFonts.beVietnamPro(
-                                          color: Colors.white70,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                    ),
+                    elevation: 8,
+                    shadowColor: AppTheme.primaryColor.withOpacity(0.4),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.goldColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$cartItemCount',
+                              style: GoogleFonts.beVietnamPro(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 13,
                               ),
-                              Row(
-                                children: [
-                                  Text(
-                                    '${_appState.cartSubtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                                    style: GoogleFonts.beVietnamPro(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
-                                ],
-                              ),
-                            ],
+                            ),
                           ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Xem giỏ hàng',
+                            style: GoogleFonts.beVietnamPro(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${_appState.cartSubtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
+                        style: GoogleFonts.beVietnamPro(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppTheme.goldColor,
                         ),
                       ),
-                    ),
-                  );
-                },
+                    ],
+                  ),
+                ),
               ),
             ),
         ],
@@ -424,63 +320,37 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
 
   Widget _buildCategoryChip(BeverageCategory category, String label) {
     final isSelected = _selectedCategory == category;
-    
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: GestureDetector(
-        onTap: () {
+      padding: const EdgeInsets.only(right: 8.0),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(label),
+        labelStyle: GoogleFonts.beVietnamPro(
+          color: isSelected ? Colors.white : AppTheme.textDark,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 13,
+        ),
+        backgroundColor: AppTheme.backgroundColor,
+        selectedColor: AppTheme.primaryColor,
+        checkmarkColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
+          ),
+        ),
+        onSelected: (bool selected) {
           setState(() {
             _selectedCategory = category;
           });
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.fastOutSlowIn,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryColor : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
-              width: 1,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withOpacity(0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    )
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.beVietnamPro(
-                color: isSelected ? Colors.white : AppTheme.textDark,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
-}
 
-// Minimalist Item Card with Hover-press effect
-class _BeverageCard extends StatelessWidget {
-  final Beverage beverage;
-  final VoidCallback onTap;
-
-  const _BeverageCard({required this.beverage, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildBeverageCard(Beverage beverage) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _showBeverageDetails(beverage),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -488,7 +358,7 @@ class _BeverageCard extends StatelessWidget {
           border: Border.all(color: AppTheme.dividerColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.015),
+              color: Colors.black.withOpacity(0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -563,7 +433,7 @@ class _BeverageCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Text Details
             Padding(
               padding: const EdgeInsets.all(12.0),
@@ -646,8 +516,8 @@ class _BeverageDetailsSheet extends StatefulWidget {
 class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
   int _quantity = 1;
   String _selectedSize = 'M';
-  double _sugarLevel = 1.0; // 0.0, 0.3, 0.5, 0.7, 1.0
-  double _iceLevel = 1.0;   // 0.0, 0.5, 1.0
+  double _sugarLevel = 1.0;
+  double _iceLevel = 1.0;
 
   @override
   void initState() {
@@ -692,7 +562,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
               ),
             ),
           ),
-          
+
           // Image / Top header section
           Padding(
             padding: const EdgeInsets.all(24.0),
@@ -775,7 +645,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
               ],
             ),
           ),
-          
+
           const Divider(height: 1, color: AppTheme.dividerColor),
 
           // Scrollable options
@@ -798,213 +668,139 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
 
                   // SIZE SELECTION
                   Text(
-                    'Chọn kích cỡ',
+                    'Chọn Kích Thước (Size)',
                     style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      _buildSizeOption('S', 'Nhỏ (-5.000 đ)'),
-                      const SizedBox(width: 10),
-                      _buildSizeOption('M', 'Vừa (Mặc định)'),
-                      const SizedBox(width: 10),
-                      _buildSizeOption('L', 'Lớn (+10.000 đ)'),
+                      _buildSizeOption('S', 'Nhỏ (-5k)'),
+                      _buildSizeOption('M', 'Vừa (Chuẩn)'),
+                      _buildSizeOption('L', 'Lớn (+10k)'),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // SUGAR SELECTION
                   Text(
-                    'Mức đường',
+                    'Lượng Đường',
                     style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 10),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSugarOption(0.0, '0%'),
-                      _buildSugarOption(0.3, '30%'),
-                      _buildSugarOption(0.5, '50%'),
-                      _buildSugarOption(0.7, '70%'),
-                      _buildSugarOption(1.0, '100%'),
+                      _buildSugarOption('0%', 0.0),
+                      _buildSugarOption('30%', 0.3),
+                      _buildSugarOption('50%', 0.5),
+                      _buildSugarOption('70%', 0.7),
+                      _buildSugarOption('100%', 1.0),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // ICE SELECTION
                   Text(
-                    'Mức đá',
+                    'Lượng Đá',
                     style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
                   ),
                   const SizedBox(height: 10),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildIceOption(0.0, '0% đá'),
-                      _buildIceOption(0.5, '50% đá'),
-                      _buildIceOption(1.0, '100% đá'),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // QUANTITY SELECTION
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Số lượng',
-                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                      ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              if (_quantity > 1) {
-                                setState(() {
-                                  _quantity--;
-                                });
-                              }
-                            },
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppTheme.backgroundColor,
-                                border: Border.all(color: AppTheme.dividerColor),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.remove_rounded, color: AppTheme.textDark),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text(
-                              '$_quantity',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _quantity++;
-                              });
-                            },
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppTheme.backgroundColor,
-                                border: Border.all(color: AppTheme.dividerColor),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.add_rounded, color: AppTheme.textDark),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _buildIceOption('Không đá', 0.0),
+                      _buildIceOption('50% đá', 0.5),
+                      _buildIceOption('100% đá', 1.0),
                     ],
                   ),
                 ],
               ),
             ),
           ),
-          
+
           const Divider(height: 1, color: AppTheme.dividerColor),
 
-          // Bottom Bar containing Total price and ADD button
+          // Bottom Action Bar
           SafeArea(
-            top: false,
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                  // Quantity selector
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.backgroundColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.dividerColor),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'Tổng tiền',
-                          style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
+                        IconButton(
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () {
+                            if (_quantity > 1) {
+                              setState(() {
+                                _quantity--;
+                              });
+                            }
+                          },
                         ),
                         Text(
-                          '${_totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                          style: GoogleFonts.beVietnamPro(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
+                          '$_quantity',
+                          style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _quantity++;
+                            });
+                          },
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (widget.cartItemIndex != null) {
-                        AppState().updateCartItem(
-                          widget.cartItemIndex!,
-                          quantity: _quantity,
-                          size: _selectedSize,
-                          sugar: _sugarLevel,
-                          ice: _iceLevel,
-                        );
+
+                  // Add to Cart / Update Button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final appState = AppState();
+                        if (widget.cartItemIndex != null) {
+                          appState.updateCartItem(
+                            widget.cartItemIndex!,
+                            quantity: _quantity,
+                            size: _selectedSize,
+                            sugar: _sugarLevel,
+                            ice: _iceLevel,
+                          );
+                        } else {
+                          appState.addToCart(
+                            widget.beverage,
+                            quantity: _quantity,
+                            size: _selectedSize,
+                            sugar: _sugarLevel,
+                            ice: _iceLevel,
+                          );
+                        }
                         Navigator.pop(context);
-                        
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Đã cập nhật ${widget.beverage.name} trong giỏ hàng',
-                              style: GoogleFonts.beVietnamPro(),
-                            ),
-                            backgroundColor: AppTheme.primaryColor,
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        );
-                      } else {
-                        AppState().addToCart(
-                          widget.beverage,
-                          quantity: _quantity,
-                          size: _selectedSize,
-                          sugar: _sugarLevel,
-                          ice: _iceLevel,
-                        );
-                        Navigator.pop(context);
-                        
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Đã thêm $_quantity x ${widget.beverage.name} vào giỏ hàng',
-                              style: GoogleFonts.beVietnamPro(),
-                            ),
-                            backgroundColor: AppTheme.primaryColor,
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      widget.cartItemIndex != null ? 'Cập Nhật' : 'Thêm Vào Giỏ Hàng',
-                      style: GoogleFonts.beVietnamPro(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                      child: Text(
+                        widget.cartItemIndex != null
+                            ? 'Cập nhật • ${_totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ'
+                            : 'Thêm vào giỏ • ${_totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
+                        style: GoogleFonts.beVietnamPro(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -1017,78 +813,85 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
     );
   }
 
-  Widget _buildSizeOption(String size, String desc) {
+  Widget _buildSizeOption(String size, String label) {
     final isSelected = _selectedSize == size;
     return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedSize = size;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryColor : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
-              width: 1.5,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedSize = size;
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
             ),
-          ),
-          child: Column(
-            children: [
-              Text(
-                size,
-                style: GoogleFonts.beVietnamPro(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : AppTheme.textDark,
+            child: Column(
+              children: [
+                Text(
+                  size,
+                  style: GoogleFonts.beVietnamPro(
+                    color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                size == 'S' ? '-5k' : size == 'M' ? 'Mặc định' : '+10k',
-                style: GoogleFonts.beVietnamPro(
-                  fontSize: 9,
-                  color: isSelected ? Colors.white70 : AppTheme.textLight,
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: GoogleFonts.beVietnamPro(
+                    color: isSelected ? AppTheme.primaryColor : AppTheme.textLight,
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSugarOption(double level, String text) {
+  Widget _buildSugarOption(String text, double level) {
     final isSelected = _sugarLevel == level;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _sugarLevel = level;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 52,
-        height: 38,
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: GoogleFonts.beVietnamPro(
-              color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              fontSize: 12,
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _sugarLevel = level;
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                text,
+                style: GoogleFonts.beVietnamPro(
+                  color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
         ),
@@ -1096,7 +899,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
     );
   }
 
-  Widget _buildIceOption(double level, String text) {
+  Widget _buildIceOption(String text, double level) {
     final isSelected = _iceLevel == level;
     return Expanded(
       child: Padding(
@@ -1135,7 +938,7 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
   }
 }
 
-// Shopping Cart Sheet widget
+// Shopping Cart Sheet widget with Promotion Voucher Support
 class _CartSheet extends StatefulWidget {
   const _CartSheet();
 
@@ -1146,10 +949,11 @@ class _CartSheet extends StatefulWidget {
 class _CartSheetState extends State<_CartSheet> {
   final AppState _appState = AppState();
   final _formKey = GlobalKey<FormState>();
-  
+
   final _nameController = TextEditingController(text: 'Nguyễn Văn Hải');
   final _phoneController = TextEditingController(text: '0912345678');
   final _addressController = TextEditingController(text: '7/2 Thành Thái, Quận 10, TP. Hồ Chí Minh');
+  final _promoCodeController = TextEditingController();
 
   bool _isCheckoutMode = false;
   bool _isPlacingOrder = false;
@@ -1171,12 +975,35 @@ class _CartSheetState extends State<_CartSheet> {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _promoCodeController.dispose();
     super.dispose();
   }
 
   void _updateState() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _applyPromoCode() {
+    final code = _promoCodeController.text.trim();
+    final error = _appState.applyPromotionCode(code);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error, style: GoogleFonts.beVietnamPro()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Áp dụng mã khuyến mãi thành công!', style: GoogleFonts.beVietnamPro()),
+          backgroundColor: AppTheme.primaryColor,
+        ),
+      );
+      _promoCodeController.clear();
     }
   }
 
@@ -1251,12 +1078,11 @@ class _CartSheetState extends State<_CartSheet> {
         _isPlacingOrder = true;
       });
 
-      // Simulate place order transition delay
-      await Future.delayed(const Duration(milliseconds: 1500));
+      await Future.delayed(const Duration(milliseconds: 1200));
 
       if (!mounted) return;
 
-      _appState.placeOrder(
+      await _appState.placeOrder(
         _nameController.text.trim(),
         _phoneController.text.trim(),
         _addressController.text.trim(),
@@ -1268,7 +1094,6 @@ class _CartSheetState extends State<_CartSheet> {
 
       Navigator.pop(context);
 
-      // Show success dialog
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -1297,7 +1122,7 @@ class _CartSheetState extends State<_CartSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Đơn hàng của bạn đã được tiếp nhận và đang được xử lý. Bạn có thể kiểm tra trạng thái trong mục quản trị nếu là Admin.',
+                'Đơn hàng của bạn đã được ghi nhận trực tiếp vào Cloud Firestore và đang được cửa hàng chế biến.',
                 style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
@@ -1322,7 +1147,7 @@ class _CartSheetState extends State<_CartSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.88,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
@@ -1393,36 +1218,67 @@ class _CartSheetState extends State<_CartSheet> {
                     ? _buildCheckoutForm()
                     : _buildCartItemsList(),
           ),
-          
+
           const Divider(height: 1, color: AppTheme.dividerColor),
 
-          // Footer
+          // Footer Total Breakdown & Action Buttons
           if (_appState.cartItems.isNotEmpty)
             SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Subtotal
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Tạm tính', style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight)),
+                        Text(
+                          '${_appState.cartSubtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
+                          style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                        ),
+                      ],
+                    ),
+
+                    // Discount row (if applied)
+                    if (_appState.appliedPromotion != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.local_offer, size: 14, color: Colors.deepOrangeAccent),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Giảm giá (${_appState.appliedPromotion!.code})',
+                                style: GoogleFonts.beVietnamPro(fontSize: 13, color: Colors.deepOrangeAccent, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '-${_appState.discountAmount.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
+                            style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.deepOrangeAccent),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    // Final Total
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Tổng thanh toán',
-                          style: GoogleFonts.beVietnamPro(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textDark,
-                          ),
+                          style: GoogleFonts.beVietnamPro(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                         ),
                         Text(
-                          '${_appState.cartSubtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                          style: GoogleFonts.beVietnamPro(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
+                          '${_appState.cartFinalTotal.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
+                          style: GoogleFonts.beVietnamPro(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
                         ),
                       ],
                     ),
@@ -1456,11 +1312,13 @@ class _CartSheetState extends State<_CartSheet> {
                               Expanded(
                                 flex: 6,
                                 child: ElevatedButton(
-                                  onPressed: _isCheckoutMode ? _submitOrder : () {
-                                    setState(() {
-                                      _isCheckoutMode = true;
-                                    });
-                                  },
+                                  onPressed: _isCheckoutMode
+                                      ? _submitOrder
+                                      : () {
+                                          setState(() {
+                                            _isCheckoutMode = true;
+                                          });
+                                        },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
@@ -1491,145 +1349,277 @@ class _CartSheetState extends State<_CartSheet> {
   }
 
   Widget _buildCartItemsList() {
-    return ListView.separated(
+    final availablePromos = _appState.promotions;
+
+    return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(24),
-      itemCount: _appState.cartItems.length,
-      separatorBuilder: (context, index) => const Divider(height: 24, color: AppTheme.dividerColor),
-      itemBuilder: (context, index) {
-        final item = _appState.cartItems[index];
-        final sugarText = (item.sugar * 100).toInt().toString();
-        final iceText = (item.ice * 100).toInt().toString();
-        
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                item.beverage.imageUrl,
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 64,
-                  height: 64,
-                  color: AppTheme.primaryColor.withOpacity(0.05),
-                  child: const Icon(Icons.coffee_rounded, color: AppTheme.primaryColor),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.beverage.name,
-                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Size: ${item.size} • Đường: $sugarText% • Đá: $iceText%',
-                    style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 11),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${item.totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
-                    style: GoogleFonts.beVietnamPro(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Quantity buttons
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+      padding: const EdgeInsets.all(20),
+      children: [
+        // Cart items
+        ...List.generate(_appState.cartItems.length, (index) {
+          final item = _appState.cartItems[index];
+          final sugarText = (item.sugar * 100).toInt().toString();
+          final iceText = (item.ice * 100).toInt().toString();
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (item.quantity > 1) {
-                          _appState.updateCartQuantity(index, -1);
-                        } else {
-                          _confirmDeleteCartItem(context, index, item.beverage.name);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.backgroundColor,
-                          border: Border.all(color: AppTheme.dividerColor),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.remove, size: 14, color: AppTheme.textDark),
-                      ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    item.beverage.imageUrl,
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 64,
+                      height: 64,
+                      color: AppTheme.primaryColor.withOpacity(0.05),
+                      child: const Icon(Icons.coffee_rounded, color: AppTheme.primaryColor),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                      child: Text(
-                        '${item.quantity}',
-                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _appState.updateCartQuantity(index, 1),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.backgroundColor,
-                          border: Border.all(color: AppTheme.dividerColor),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.add, size: 14, color: AppTheme.textDark),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        // Dismiss current Cart sheet first
-                        Navigator.pop(context);
-                        // Show edit details sheet
-                        _showEditBeverageDetails(context, item.beverage, index, item);
-                      },
-                      child: Text(
-                        'Sửa',
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.beverage.name,
+                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Size: ${item.size} • Đường: $sugarText% • Đá: $iceText%',
+                        style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 11),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${item.totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
                         style: GoogleFonts.beVietnamPro(
                           color: AppTheme.primaryColor,
-                          fontSize: 12,
                           fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+
+                // Quantity controls
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            if (item.quantity > 1) {
+                              _appState.updateCartQuantity(index, -1);
+                            } else {
+                              _confirmDeleteCartItem(context, index, item.beverage.name);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.backgroundColor,
+                              border: Border.all(color: AppTheme.dividerColor),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.remove, size: 14, color: AppTheme.textDark),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                          child: Text(
+                            '${item.quantity}',
+                            style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _appState.updateCartQuantity(index, 1),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.backgroundColor,
+                              border: Border.all(color: AppTheme.dividerColor),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add, size: 14, color: AppTheme.textDark),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    GestureDetector(
-                      onTap: () => _confirmDeleteCartItem(context, index, item.beverage.name),
-                      child: Text(
-                        'Xóa',
-                        style: GoogleFonts.beVietnamPro(
-                          color: Colors.redAccent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showEditBeverageDetails(context, item.beverage, index, item);
+                          },
+                          child: Text(
+                            'Sửa',
+                            style: GoogleFonts.beVietnamPro(
+                              color: AppTheme.primaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 16),
+                        GestureDetector(
+                          onTap: () => _confirmDeleteCartItem(context, index, item.beverage.name),
+                          child: Text(
+                            'Xóa',
+                            style: GoogleFonts.beVietnamPro(
+                              color: Colors.redAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ],
             ),
-          ],
-        );
-      },
+          );
+        }),
+
+        const Divider(height: 32, color: AppTheme.dividerColor),
+
+        // PROMOTION VOUCHER INPUT CARD
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.dividerColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.confirmation_number_outlined, color: AppTheme.goldColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Mã Khuyến Mãi / Voucher Phúc Long',
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // If voucher applied
+              if (_appState.appliedPromotion != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Đã áp dụng: ${_appState.appliedPromotion!.code}',
+                              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13),
+                            ),
+                            Text(
+                              _appState.appliedPromotion!.title,
+                              style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppTheme.textLight),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
+                        onPressed: () {
+                          _appState.removeAppliedPromotion();
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _promoCodeController,
+                        textCapitalization: TextCapitalization.characters,
+                        style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          hintText: 'Nhập mã (ví dụ: PHUCLONG10)',
+                          hintStyle: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight, fontWeight: FontWeight.normal),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: AppTheme.dividerColor),
+                          ),
+                          fillColor: Colors.white,
+                          filled: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _applyPromoCode,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: Text('Áp dụng', style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+
+              // Available Vouchers Quick Picker
+              if (availablePromos.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text('Mã giảm giá khả dụng:', style: GoogleFonts.beVietnamPro(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textLight)),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: availablePromos.map((p) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ActionChip(
+                          avatar: const Icon(Icons.card_giftcard, size: 14, color: AppTheme.goldColor),
+                          label: Text('${p.code} (${p.discountType == "percent" ? "${p.discountValue.toInt()}%" : "${(p.discountValue / 1000).toInt()}k"})'),
+                          labelStyle: GoogleFonts.beVietnamPro(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                          backgroundColor: Colors.white,
+                          side: const BorderSide(color: AppTheme.dividerColor),
+                          onPressed: () {
+                            _promoCodeController.text = p.code;
+                            _applyPromoCode();
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1733,6 +1723,20 @@ class _CartSheetState extends State<_CartSheet> {
                           ],
                         ),
                       )),
+                  if (_appState.appliedPromotion != null) ...[
+                    const Divider(height: 16, color: AppTheme.dividerColor),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Mã giảm giá (${_appState.appliedPromotion!.code})',
+                            style: GoogleFonts.beVietnamPro(fontSize: 13, color: Colors.deepOrangeAccent, fontWeight: FontWeight.bold)),
+                        Text(
+                          '-${_appState.discountAmount.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]}.")} đ',
+                          style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.deepOrangeAccent),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1742,4 +1746,3 @@ class _CartSheetState extends State<_CartSheet> {
     );
   }
 }
-

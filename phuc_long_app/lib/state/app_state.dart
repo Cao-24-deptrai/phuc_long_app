@@ -1,17 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../models/beverage.dart';
 import '../models/user.dart';
+import '../models/promotion.dart';
 
 class AppState extends ChangeNotifier {
   // Singleton pattern
   static final AppState _instance = AppState._internal();
   factory AppState() => _instance;
+
   AppState._internal() {
-    // Initialise lists
-    _beverages = List.from(mockBeverages);
-    // Initialize default users
+    // Initialise default users
     _users['user@gmail.com'] = UserModel(
       email: 'user@gmail.com',
       password: 'user',
@@ -25,11 +26,112 @@ class AppState extends ChangeNotifier {
       name: 'Quản trị viên',
       isAdmin: true,
     );
+
+    // Initial local fallback data
+    _beverages = List.from(mockBeverages);
+    _promotions = List.from(mockPromotions);
+
+    // Bind real-time Firebase Firestore listeners
+    _initFirestoreListeners();
+  }
+
+  // Firestore Subscriptions
+  StreamSubscription<QuerySnapshot>? _beveragesSub;
+  StreamSubscription<QuerySnapshot>? _ordersSub;
+  StreamSubscription<QuerySnapshot>? _promotionsSub;
+
+  void _initFirestoreListeners() {
+    final firestore = FirebaseFirestore.instance;
+
+    // 1. Beverages Collection Listener
+    _beveragesSub = firestore.collection('beverages').snapshots().listen(
+      (snapshot) {
+        if (snapshot.docs.isEmpty) {
+          _seedBeveragesToFirestore();
+        } else {
+          _beverages = snapshot.docs
+              .map((doc) => Beverage.fromFirestore(doc))
+              .toList();
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        debugPrint("Firestore Beverages Listener Error: $error");
+      },
+    );
+
+    // 2. Orders Collection Listener
+    _ordersSub = firestore.collection('orders').orderBy('date', descending: true).snapshots().listen(
+      (snapshot) {
+        _orders = snapshot.docs
+            .map((doc) => Order.fromFirestore(doc))
+            .toList();
+        notifyListeners();
+      },
+      onError: (error) {
+        debugPrint("Firestore Orders Listener Error: $error");
+      },
+    );
+
+    // 3. Promotions Collection Listener
+    _promotionsSub = firestore.collection('promotions').snapshots().listen(
+      (snapshot) {
+        if (snapshot.docs.isEmpty) {
+          _seedPromotionsToFirestore();
+        } else {
+          _promotions = snapshot.docs
+              .map((doc) => Promotion.fromFirestore(doc))
+              .toList();
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        debugPrint("Firestore Promotions Listener Error: $error");
+      },
+    );
+  }
+
+  /// Seed initial beverages into Firestore if collection is empty
+  Future<void> _seedBeveragesToFirestore() async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final collection = FirebaseFirestore.instance.collection('beverages');
+      for (var bev in mockBeverages) {
+        batch.set(collection.doc(bev.id), bev.toMap());
+      }
+      await batch.commit();
+      debugPrint("✅ Initial beverages successfully seeded to Cloud Firestore");
+    } catch (e) {
+      debugPrint("⚠️ Seed Beverages Error: $e");
+    }
+  }
+
+  /// Seed initial promotions into Firestore if collection is empty
+  Future<void> _seedPromotionsToFirestore() async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final collection = FirebaseFirestore.instance.collection('promotions');
+      for (var promo in mockPromotions) {
+        batch.set(collection.doc(promo.id), promo.toMap());
+      }
+      await batch.commit();
+      debugPrint("✅ Initial promotions successfully seeded to Cloud Firestore");
+    } catch (e) {
+      debugPrint("⚠️ Seed Promotions Error: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _beveragesSub?.cancel();
+    _ordersSub?.cancel();
+    _promotionsSub?.cancel();
+    super.dispose();
   }
 
   // Registered users map: email -> UserModel
   final Map<String, UserModel> _users = {};
-  
+
   // Current logged in user
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
@@ -51,7 +153,7 @@ class AppState extends ChangeNotifier {
         email: cleanEmail,
         password: password,
       );
-      
+
       final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
       if (doc.exists) {
         final data = doc.data()!;
@@ -106,7 +208,7 @@ class AppState extends ChangeNotifier {
         email: cleanEmail,
         password: password,
       );
-      
+
       await FirebaseFirestore.instance.collection('users').doc(cleanEmail).set({
         'email': cleanEmail,
         'name': name,
@@ -146,7 +248,7 @@ class AppState extends ChangeNotifier {
       if (user != null) {
         await user.updatePassword(newPassword);
       }
-      
+
       _currentUser!.password = newPassword;
       _users[_currentUser!.email]!.password = newPassword;
       notifyListeners();
@@ -166,7 +268,7 @@ class AppState extends ChangeNotifier {
 
   Future<bool> resetPassword(String email, String newPassword) async {
     final cleanEmail = email.trim().toLowerCase();
-    
+
     if (!_users.containsKey(cleanEmail)) {
       _users[cleanEmail] = UserModel(
         email: cleanEmail,
@@ -206,15 +308,15 @@ class AppState extends ChangeNotifier {
 
   void updateProfile(String name, String phone, String address) async {
     if (_currentUser == null) return;
-    
+
     _currentUser!.name = name;
     _currentUser!.phone = phone;
     _currentUser!.address = address;
-    
+
     _users[_currentUser!.email]!.name = name;
     _users[_currentUser!.email]!.phone = phone;
     _users[_currentUser!.email]!.address = address;
-    
+
     notifyListeners();
 
     try {
@@ -234,7 +336,7 @@ class AppState extends ChangeNotifier {
     if (_users.containsKey(cleanEmail)) {
       return true;
     }
-    
+
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(cleanEmail).get();
       if (doc.exists) {
@@ -253,7 +355,6 @@ class AppState extends ChangeNotifier {
       debugPrint("Check User Exists Error: $e");
     }
 
-    // Accept valid emails and initialize record in memory
     if (RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(cleanEmail)) {
       _users[cleanEmail] = UserModel(
         email: cleanEmail,
@@ -266,7 +367,6 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  /// Search user by email for role permissions
   Future<UserModel?> findUserByEmail(String email) async {
     final cleanEmail = email.trim().toLowerCase();
     if (_users.containsKey(cleanEmail)) {
@@ -295,7 +395,6 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  /// Update user admin role
   Future<bool> updateUserRole(String email, bool isAdmin) async {
     final cleanEmail = email.trim().toLowerCase();
     if (_users.containsKey(cleanEmail)) {
@@ -318,48 +417,172 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-
-  // Beverage List
-  late List<Beverage> _beverages;
+  // -------------------------------------------------------------
+  // BEVERAGES / PRODUCTS STATE & FIRESTORE CRUD
+  // -------------------------------------------------------------
+  List<Beverage> _beverages = [];
   List<Beverage> get beverages => _beverages.where((b) => _currentRole == 'admin' || b.isAvailable).toList();
   List<Beverage> get allBeveragesForAdmin => _beverages;
 
-  // Add beverage
-  void addBeverage(Beverage beverage) {
+  Future<void> addBeverage(Beverage beverage) async {
     _beverages.insert(0, beverage);
     notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('beverages').doc(beverage.id).set(beverage.toMap());
+    } catch (e) {
+      debugPrint("Firestore Add Beverage Error: $e");
+    }
   }
 
-  // Update beverage details
-  void updateBeverage(Beverage updated) {
+  Future<void> updateBeverage(Beverage updated) async {
     final index = _beverages.indexWhere((b) => b.id == updated.id);
     if (index != -1) {
       _beverages[index] = updated;
       notifyListeners();
     }
+
+    try {
+      await FirebaseFirestore.instance.collection('beverages').doc(updated.id).update(updated.toMap());
+    } catch (e) {
+      debugPrint("Firestore Update Beverage Error: $e");
+    }
   }
 
-  // Toggle availability
-  void toggleAvailability(String id) {
+  Future<void> toggleAvailability(String id) async {
     final index = _beverages.indexWhere((b) => b.id == id);
     if (index != -1) {
       _beverages[index].isAvailable = !_beverages[index].isAvailable;
       notifyListeners();
+
+      try {
+        await FirebaseFirestore.instance.collection('beverages').doc(id).update({
+          'isAvailable': _beverages[index].isAvailable,
+        });
+      } catch (e) {
+        debugPrint("Firestore Toggle Availability Error: $e");
+      }
     }
   }
 
-  // Delete beverage
-  void deleteBeverage(String id) {
+  Future<void> deleteBeverage(String id) async {
     _beverages.removeWhere((b) => b.id == id);
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('beverages').doc(id).delete();
+    } catch (e) {
+      debugPrint("Firestore Delete Beverage Error: $e");
+    }
+  }
+
+  // -------------------------------------------------------------
+  // PROMOTIONS STATE & FIRESTORE CRUD
+  // -------------------------------------------------------------
+  List<Promotion> _promotions = [];
+  List<Promotion> get promotions => _promotions.where((p) => _currentRole == 'admin' || p.isAvailable).toList();
+  List<Promotion> get allPromotionsForAdmin => _promotions;
+
+  Promotion? _appliedPromotion;
+  Promotion? get appliedPromotion => _appliedPromotion;
+
+  String? applyPromotionCode(String code) {
+    final cleanCode = code.trim().toUpperCase();
+    if (cleanCode.isEmpty) return 'Vui lòng nhập mã khuyến mãi';
+
+    final index = _promotions.indexWhere((p) => p.code == cleanCode && p.isAvailable);
+    if (index == -1) {
+      return 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn!';
+    }
+
+    final promo = _promotions[index];
+    if (cartSubtotal < promo.minOrderPrice) {
+      final minStr = promo.minOrderPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+      return 'Mã này chỉ áp dụng cho đơn từ $minStr đ trở lên!';
+    }
+
+    _appliedPromotion = promo;
+    notifyListeners();
+    return null; // Null means success
+  }
+
+  void removeAppliedPromotion() {
+    _appliedPromotion = null;
     notifyListeners();
   }
 
-  // Shopping Cart State
+  double get discountAmount {
+    if (_appliedPromotion == null) return 0.0;
+    return _appliedPromotion!.calculateDiscount(cartSubtotal);
+  }
+
+  double get cartFinalTotal {
+    final total = cartSubtotal - discountAmount;
+    return total < 0 ? 0 : total;
+  }
+
+  Future<void> addPromotion(Promotion promotion) async {
+    _promotions.insert(0, promotion);
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('promotions').doc(promotion.id).set(promotion.toMap());
+    } catch (e) {
+      debugPrint("Firestore Add Promotion Error: $e");
+    }
+  }
+
+  Future<void> updatePromotion(Promotion updated) async {
+    final index = _promotions.indexWhere((p) => p.id == updated.id);
+    if (index != -1) {
+      _promotions[index] = updated;
+      notifyListeners();
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('promotions').doc(updated.id).update(updated.toMap());
+    } catch (e) {
+      debugPrint("Firestore Update Promotion Error: $e");
+    }
+  }
+
+  Future<void> togglePromotionAvailability(String id) async {
+    final index = _promotions.indexWhere((p) => p.id == id);
+    if (index != -1) {
+      _promotions[index].isAvailable = !_promotions[index].isAvailable;
+      notifyListeners();
+
+      try {
+        await FirebaseFirestore.instance.collection('promotions').doc(id).update({
+          'isAvailable': _promotions[index].isAvailable,
+        });
+      } catch (e) {
+        debugPrint("Firestore Toggle Promotion Error: $e");
+      }
+    }
+  }
+
+  Future<void> deletePromotion(String id) async {
+    _promotions.removeWhere((p) => p.id == id);
+    if (_appliedPromotion?.id == id) {
+      _appliedPromotion = null;
+    }
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('promotions').doc(id).delete();
+    } catch (e) {
+      debugPrint("Firestore Delete Promotion Error: $e");
+    }
+  }
+
+  // -------------------------------------------------------------
+  // CART STATE
+  // -------------------------------------------------------------
   final List<CartItem> _cartItems = [];
   List<CartItem> get cartItems => _cartItems;
 
   void addToCart(Beverage beverage, {int quantity = 1, String size = 'M', double sugar = 1.0, double ice = 1.0}) {
-    // Check if duplicate item exists
     final index = _cartItems.indexWhere((item) =>
         item.beverage.id == beverage.id &&
         item.size == size &&
@@ -410,6 +633,7 @@ class AppState extends ChangeNotifier {
 
   void clearCart() {
     _cartItems.clear();
+    _appliedPromotion = null;
     notifyListeners();
   }
 
@@ -421,61 +645,57 @@ class AppState extends ChangeNotifier {
     return total;
   }
 
-  // Orders State
-  final List<Order> _orders = [
-    Order(
-      id: 'PL-8891',
-      items: [
-        CartItem(beverage: mockBeverages[0], quantity: 2, size: 'M'),
-        CartItem(beverage: mockBeverages[1], quantity: 1, size: 'L'),
-      ],
-      total: 180000,
-      date: DateTime.now().subtract(const Duration(hours: 2)),
-      customerName: 'Nguyễn Văn A',
-      customerPhone: '0901234567',
-      customerAddress: '123 Đường Lê Lợi, Quận 1, TP. HCM',
-      status: 'Đang xử lý',
-    ),
-    Order(
-      id: 'PL-8892',
-      items: [
-        CartItem(beverage: mockBeverages[3], quantity: 1, size: 'S'),
-      ],
-      total: 40000,
-      date: DateTime.now().subtract(const Duration(hours: 5)),
-      customerName: 'Trần Thị B',
-      customerPhone: '0987654321',
-      customerAddress: '456 Đường Nguyễn Huệ, Quận 1, TP. HCM',
-      status: 'Đã hoàn thành',
-    )
-  ];
+  // -------------------------------------------------------------
+  // ORDERS STATE & FIRESTORE CRUD
+  // -------------------------------------------------------------
+  List<Order> _orders = [];
   List<Order> get orders => _orders;
 
-  void placeOrder(String name, String phone, String address) {
+  Future<void> placeOrder(String name, String phone, String address) async {
     if (_cartItems.isEmpty) return;
-    
+
+    final orderId = 'PL-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final appliedPromo = _appliedPromotion;
+    final finalDiscount = discountAmount;
+    final finalTotal = cartFinalTotal;
+
     final newOrder = Order(
-      id: 'PL-${1000 + _orders.length}',
+      id: orderId,
       items: List.from(_cartItems),
-      total: cartSubtotal,
+      total: finalTotal,
+      discountAmount: finalDiscount,
+      promoCode: appliedPromo?.code ?? '',
       date: DateTime.now(),
       customerName: name,
       customerPhone: phone,
       customerAddress: address,
       status: 'Chờ xử lý',
     );
-    
+
     _orders.insert(0, newOrder);
     clearCart();
     notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(newOrder.id).set(newOrder.toMap());
+    } catch (e) {
+      debugPrint("Firestore Place Order Error: $e");
+    }
   }
 
-  void updateOrderStatus(String orderId, String status) {
+  Future<void> updateOrderStatus(String orderId, String status) async {
     final index = _orders.indexWhere((o) => o.id == orderId);
     if (index != -1) {
       _orders[index].status = status;
       notifyListeners();
     }
+
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+        'status': status,
+      });
+    } catch (e) {
+      debugPrint("Firestore Update Order Status Error: $e");
+    }
   }
 }
-

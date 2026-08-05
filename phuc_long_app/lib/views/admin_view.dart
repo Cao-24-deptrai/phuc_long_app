@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/beverage.dart';
 import '../models/user.dart';
+import '../models/promotion.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import 'login_view.dart';
@@ -28,7 +29,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -117,11 +118,13 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           labelColor: AppTheme.primaryColor,
           unselectedLabelColor: AppTheme.textLight,
           indicatorColor: AppTheme.primaryColor,
+          isScrollable: true,
           labelStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12),
           tabs: const [
             Tab(icon: Icon(Icons.dashboard_outlined), text: 'Thống Kê'),
             Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Đơn Hàng'),
             Tab(icon: Icon(Icons.local_drink_outlined), text: 'Sản Phẩm'),
+            Tab(icon: Icon(Icons.local_offer_outlined), text: 'Khuyến Mãi'),
             Tab(icon: Icon(Icons.admin_panel_settings_outlined), text: 'Phân Quyền'),
           ],
         ),
@@ -133,6 +136,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           _buildDashboardTab(),
           _buildOrdersTab(),
           _buildProductsTab(),
+          _buildPromotionsTab(),
           _buildPermissionsTab(),
         ],
       ),
@@ -141,9 +145,18 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               onPressed: _showAddProductDialog,
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
+              tooltip: 'Thêm sản phẩm mới',
               child: const Icon(Icons.add),
             )
-          : null,
+          : _tabController.index == 3
+              ? FloatingActionButton(
+                  onPressed: _showAddPromotionDialog,
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  tooltip: 'Thêm mã khuyến mãi mới',
+                  child: const Icon(Icons.add),
+                )
+              : null,
     );
   }
 
@@ -151,8 +164,9 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   Widget _buildDashboardTab() {
     final completedOrders = _appState.orders.where((o) => o.status == 'Đã hoàn thành').toList();
     final double totalRevenue = completedOrders.fold(0.0, (sum, o) => sum + o.total);
-    final pendingOrdersCount = _appState.orders.where((o) => o.status == 'Chờ xử lý' || o.status == 'Đang xử lý').length;
+    final pendingOrdersCount = _appState.orders.where((o) => o.status == 'Chờ xử lý' || o.status == 'Đang xử lý' || o.status == 'Đang chuẩn bị').length;
     final totalProducts = _appState.allBeveragesForAdmin.length;
+    final totalPromos = _appState.allPromotionsForAdmin.length;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -161,7 +175,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tổng quan cửa hàng',
+            'Tổng quan cửa hàng (Firebase Firestore)',
             style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 16),
@@ -171,7 +185,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.5,
+            childAspectRatio: 1.4,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             children: [
@@ -194,16 +208,16 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 AppTheme.primaryColor,
               ),
               _buildStatCard(
-                'Tổng số đơn hàng',
-                '${_appState.orders.length} đơn',
-                Icons.receipt_long_outlined,
-                Colors.blue,
+                'Mã khuyến mãi',
+                '$totalPromos mã',
+                Icons.card_giftcard_rounded,
+                Colors.deepOrangeAccent,
               ),
             ],
           ),
           const SizedBox(height: 28),
 
-          // Custom Sales Chart (Animated)
+          // Custom Sales Chart
           Text(
             'Doanh thu tuần này (nghìn đồng)',
             style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
@@ -238,7 +252,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           
           // Latest Active Orders
           Text(
-            'Đơn hàng gần đây',
+            'Đơn hàng gần đây (Cloud Firestore)',
             style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 12),
@@ -300,7 +314,14 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppTheme.textLight, fontWeight: FontWeight.w500)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppTheme.textLight, fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               Icon(icon, color: color, size: 20),
             ],
           ),
@@ -351,7 +372,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           children: [
             const Icon(Icons.receipt_long_outlined, size: 64, color: AppTheme.textLight),
             const SizedBox(height: 12),
-            Text('Chưa có đơn hàng nào.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            Text('Chưa có đơn hàng nào trên Cloud Firestore.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ],
         ),
       );
@@ -410,6 +431,11 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     const SizedBox(height: 4),
                     Text('SĐT: ${order.customerPhone}', style: GoogleFonts.beVietnamPro(fontSize: 13)),
                     Text('Địa chỉ: ${order.customerAddress}', style: GoogleFonts.beVietnamPro(fontSize: 13)),
+                    if (order.promoCode.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Mã giảm giá đã dùng: ${order.promoCode} (-${order.discountAmount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ)',
+                          style: GoogleFonts.beVietnamPro(fontSize: 13, color: Colors.deepOrangeAccent, fontWeight: FontWeight.w600)),
+                    ],
                     const SizedBox(height: 12),
                     Text('Chi tiết sản phẩm:', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 6),
@@ -429,7 +455,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     const Divider(height: 24, color: AppTheme.dividerColor),
                     
                     // Order status action triggers
-                    Text('Cập nhật trạng thái đơn:', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text('Cập nhật trạng thái đơn (Đẩy Firestore):', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -552,7 +578,116 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     );
   }
 
-  // TAB 4: ROLE PERMISSIONS MANAGEMENT (ADMIN TAB)
+  // TAB 4: PROMOTIONS MANAGEMENT
+  Widget _buildPromotionsTab() {
+    final promos = _appState.allPromotionsForAdmin;
+
+    if (promos.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.local_offer_outlined, size: 64, color: AppTheme.textLight),
+            const SizedBox(height: 12),
+            Text('Chưa có mã khuyến mãi nào trên Cloud Firestore.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: promos.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final promo = promos[index];
+        final discountStr = promo.discountType == 'percent'
+            ? '${promo.discountValue.toStringAsFixed(0)}%'
+            : '${promo.discountValue.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ';
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppTheme.dividerColor),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.goldColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.confirmation_number_outlined, color: AppTheme.goldColor, size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              promo.code,
+                              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryColor),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Giảm $discountStr',
+                            style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.deepOrangeAccent),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(promo.title, style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textDark)),
+                      const SizedBox(height: 2),
+                      Text(promo.description, style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+
+                // Switch status
+                Switch(
+                  value: promo.isAvailable,
+                  activeColor: AppTheme.primaryColor,
+                  onChanged: (val) {
+                    _appState.togglePromotionAvailability(promo.id);
+                  },
+                ),
+
+                // Edit
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: AppTheme.textLight),
+                  onPressed: () => _showEditPromotionDialog(promo),
+                ),
+
+                // Delete
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                  onPressed: () {
+                    _appState.deletePromotion(promo.id);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // TAB 5: ROLE PERMISSIONS MANAGEMENT (ADMIN TAB)
   Widget _buildPermissionsTab() {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -630,7 +765,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
           const SizedBox(height: 24),
 
-          // Search Results / Selection Container
+          // Search Results
           if (!_hasSearched)
             Center(
               child: Padding(
@@ -685,7 +820,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header User Info
                     Row(
                       children: [
                         Container(
@@ -743,7 +877,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
                     const Divider(height: 32, color: AppTheme.dividerColor),
 
-                    // Role Options Selection
                     Text(
                       'Tùy chọn phân quyền:',
                       style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textDark),
@@ -770,7 +903,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                       groupValue: _selectedIsAdminRole,
                       activeColor: AppTheme.primaryColor,
                       title: Text('Quản trị viên (Admin)', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.primaryColor)),
-                      subtitle: Text('Toàn quyền truy cập quản lý sản phẩm, đơn hàng, thống kê và phân quyền.', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                      subtitle: Text('Toàn quyền truy cập quản lý sản phẩm, đơn hàng, khuyến mãi, thống kê và phân quyền.', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
                       onChanged: (val) {
                         if (val != null) {
                           setState(() {
@@ -782,7 +915,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
                     const SizedBox(height: 20),
 
-                    // Save Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -925,7 +1057,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             TextButton(
               onPressed: () {
                 if (nameController.text.trim().isEmpty || priceController.text.trim().isEmpty) return;
-                
+
                 final price = double.tryParse(priceController.text) ?? 50000;
                 final newBeverage = Beverage(
                   id: 'PL-${DateTime.now().millisecondsSinceEpoch}',
@@ -933,21 +1065,193 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   category: category,
                   price: price,
                   imageUrl: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-                  description: descController.text.trim().isNotEmpty 
-                      ? descController.text.trim() 
+                  description: descController.text.trim().isNotEmpty
+                      ? descController.text.trim()
                       : 'Thức uống Phúc Long đặc trưng thơm ngon mát lạnh.',
                   rating: 5.0,
                 );
-                
+
                 _appState.addBeverage(newBeverage);
                 Navigator.pop(context);
-                
-                setState(() {}); // refresh FAB tab index state
+
+                setState(() {});
               },
               child: Text('Thêm mới', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Dialog to Add New Promotion
+  void _showAddPromotionDialog() {
+    final codeController = TextEditingController();
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    final discountValController = TextEditingController();
+    final minPriceController = TextEditingController();
+    String discountType = 'percent';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Thêm mã khuyến mãi', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: codeController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(labelText: 'Mã Voucher (VD: PHUCLONG10)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Tiêu đề khuyến mãi'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: discountType,
+                  decoration: const InputDecoration(labelText: 'Loại giảm giá'),
+                  items: const [
+                    DropdownMenuItem(value: 'percent', child: Text('Theo % phần trăm')),
+                    DropdownMenuItem(value: 'amount', child: Text('Theo số tiền cụ thể (VNĐ)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        discountType = val;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: discountValController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: discountType == 'percent' ? 'Mức giảm (%)' : 'Mức giảm (VNĐ)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: minPriceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Giá trị đơn tối thiểu (VNĐ)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'Mô tả chi tiết điều kiện'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            ),
+            TextButton(
+              onPressed: () {
+                final code = codeController.text.trim().toUpperCase();
+                final title = titleController.text.trim();
+                final val = double.tryParse(discountValController.text) ?? 0;
+                final minP = double.tryParse(minPriceController.text) ?? 0;
+
+                if (code.isEmpty || title.isEmpty || val <= 0) return;
+
+                final newPromo = Promotion(
+                  id: 'PROMO-${DateTime.now().millisecondsSinceEpoch}',
+                  code: code,
+                  title: title,
+                  description: descController.text.trim(),
+                  discountType: discountType,
+                  discountValue: val,
+                  minOrderPrice: minP,
+                  isAvailable: true,
+                );
+
+                _appState.addPromotion(newPromo);
+                Navigator.pop(context);
+                setState(() {});
+              },
+              child: Text('Lưu Mã', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Dialog to Edit Promotion
+  void _showEditPromotionDialog(Promotion promo) {
+    final titleController = TextEditingController(text: promo.title);
+    final descController = TextEditingController(text: promo.description);
+    final discountValController = TextEditingController(text: promo.discountValue.toStringAsFixed(0));
+    final minPriceController = TextEditingController(text: promo.minOrderPrice.toStringAsFixed(0));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Sửa mã ${promo.code}', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Tiêu đề khuyến mãi'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: discountValController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: promo.discountType == 'percent' ? 'Mức giảm (%)' : 'Mức giảm (VNĐ)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: minPriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Giá trị đơn tối thiểu (VNĐ)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descController,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Mô tả chi tiết'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          TextButton(
+            onPressed: () {
+              final val = double.tryParse(discountValController.text) ?? promo.discountValue;
+              final minP = double.tryParse(minPriceController.text) ?? promo.minOrderPrice;
+              final updated = promo.copyWith(
+                title: titleController.text.trim(),
+                description: descController.text.trim(),
+                discountValue: val,
+                minOrderPrice: minP,
+              );
+              _appState.updatePromotion(updated);
+              Navigator.pop(context);
+            },
+            child: Text('Cập nhật', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

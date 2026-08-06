@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../models/beverage.dart';
 import '../models/user.dart';
 import '../models/promotion.dart';
+import '../models/category.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import '../widgets/currency_formatter.dart';
@@ -83,7 +84,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -286,13 +287,15 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           unselectedLabelColor: AppTheme.textLight,
           indicatorColor: AppTheme.primaryColor,
           indicatorWeight: 3,
-          isScrollable: false,
-          labelPadding: EdgeInsets.zero,
-          labelStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 11),
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+          labelStyle: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12),
           tabs: const [
             Tab(icon: Icon(Icons.dashboard_outlined, size: 20), text: 'Thống Kê'),
             Tab(icon: Icon(Icons.receipt_long_outlined, size: 20), text: 'Đơn Hàng'),
             Tab(icon: Icon(Icons.local_drink_outlined, size: 20), text: 'Sản Phẩm'),
+            Tab(icon: Icon(Icons.category_outlined, size: 20), text: 'Danh Mục'),
             Tab(icon: Icon(Icons.local_offer_outlined, size: 20), text: 'Khuyến Mãi'),
             Tab(icon: Icon(Icons.admin_panel_settings_outlined, size: 20), text: 'Phân Quyền'),
           ],
@@ -305,6 +308,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           _buildDashboardTab(),
           _buildOrdersTab(),
           _buildProductsTab(),
+          _buildCategoriesTab(),
           _buildPromotionsTab(),
           _buildPermissionsTab(),
         ],
@@ -319,13 +323,21 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             )
           : _tabController.index == 3
               ? FloatingActionButton(
-                  onPressed: _showAddPromotionDialog,
+                  onPressed: _showAddCategoryDialog,
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
-                  tooltip: 'Thêm mã khuyến mãi mới',
+                  tooltip: 'Thêm danh mục mới',
                   child: const Icon(Icons.add),
                 )
-              : null,
+              : _tabController.index == 4
+                  ? FloatingActionButton(
+                      onPressed: _showAddPromotionDialog,
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      tooltip: 'Thêm mã khuyến mãi mới',
+                      child: const Icon(Icons.add),
+                    )
+                  : null,
     );
   }
 
@@ -1282,6 +1294,249 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           ),
         );
       },
+    );
+  }
+
+  // TAB 4: CATEGORIES MANAGEMENT
+  Widget _buildCategoriesTab() {
+    final categories = _appState.categories;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Quản lý Danh mục (Cloud Firestore)',
+                style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+              ),
+              ElevatedButton.icon(
+                onPressed: _showAddCategoryDialog,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text('Thêm Danh Mục', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (categories.isEmpty)
+            Expanded(
+              child: Center(
+                child: Text('Chưa có danh mục nào trên Cloud Firestore.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final cat = categories[index];
+                  final productCount = _appState.allBeveragesForAdmin.where((b) => b.categoryDisplayName == cat.name || b.category.name == cat.name).length;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppTheme.dividerColor),
+                    ),
+                    elevation: 0,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.category_rounded, color: AppTheme.primaryColor, size: 20),
+                      ),
+                      title: Text(
+                        cat.name,
+                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+                      ),
+                      subtitle: Text(
+                        'Có $productCount sản phẩm trong hệ thống',
+                        style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryColor),
+                            onPressed: () => _showEditCategoryDialog(cat),
+                            tooltip: 'Sửa tên danh mục',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                            onPressed: () => _deleteCategory(cat),
+                            tooltip: 'Xóa danh mục',
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddCategoryDialog() {
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Thêm Danh Mục Mới', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Tên danh mục',
+            hintText: 'Ví dụ: Trà Trái Cây, Cà Phê, Bánh & Snack...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final catName = nameController.text.trim();
+              if (catName.isNotEmpty) {
+                final errorMsg = await _appState.addCategory(catName);
+                if (!mounted) return;
+                if (errorMsg != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMsg, style: GoogleFonts.beVietnamPro()),
+                      backgroundColor: Colors.deepOrangeAccent,
+                    ),
+                  );
+                } else {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã thêm danh mục "$catName" thành công!', style: GoogleFonts.beVietnamPro()),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Thêm', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditCategoryDialog(CategoryModel cat) {
+    final nameController = TextEditingController(text: cat.name);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Sửa Tên Danh Mục', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Tên danh mục mới',
+            hintText: 'Nhập tên danh mục...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty) {
+                final errorMsg = await _appState.updateCategory(cat.id, newName);
+                if (!mounted) return;
+                if (errorMsg != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMsg, style: GoogleFonts.beVietnamPro()),
+                      backgroundColor: Colors.deepOrangeAccent,
+                    ),
+                  );
+                } else {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã cập nhật tên danh mục thành "$newName"!', style: GoogleFonts.beVietnamPro()),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Lưu', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteCategory(CategoryModel cat) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Xóa Danh Mục', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+        content: Text('Bạn có chắc chắn muốn xóa danh mục "${cat.name}" khỏi hệ thống?', style: GoogleFonts.beVietnamPro()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _appState.deleteCategory(cat.id);
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Đã xóa danh mục "${cat.name}"!', style: GoogleFonts.beVietnamPro()),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Xóa', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 

@@ -179,15 +179,43 @@ class AppState extends ChangeNotifier {
   List<CategoryModel> _categories = [];
   List<CategoryModel> get categories => _categories;
 
-  Future<void> addCategory(String name) async {
+  Future<String?> addCategory(String name) async {
     final cleanName = name.trim();
-    if (cleanName.isEmpty) return;
+    if (cleanName.isEmpty) return 'Tên danh mục không được để trống!';
+
+    // Check duplicate (case-insensitive)
+    final isDuplicate = _categories.any((c) => c.name.trim().toLowerCase() == cleanName.toLowerCase());
+    if (isDuplicate) {
+      return 'Tên danh mục "$cleanName" đã tồn tại trên hệ thống!';
+    }
+
     try {
       final docRef = FirebaseFirestore.instance.collection('categories').doc();
       final cat = CategoryModel(id: docRef.id, name: cleanName);
       await docRef.set(cat.toMap());
+      return null;
     } catch (e) {
       debugPrint("Firestore Add Category Error: $e");
+      return 'Lỗi khi lưu danh mục: $e';
+    }
+  }
+
+  Future<String?> updateCategory(String id, String newName) async {
+    final cleanName = newName.trim();
+    if (cleanName.isEmpty) return 'Tên danh mục không được để trống!';
+
+    // Check duplicate with OTHER categories (case-insensitive)
+    final isDuplicate = _categories.any((c) => c.id != id && c.name.trim().toLowerCase() == cleanName.toLowerCase());
+    if (isDuplicate) {
+      return 'Tên danh mục "$cleanName" đã tồn tại trên hệ thống!';
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('categories').doc(id).update({'name': cleanName});
+      return null;
+    } catch (e) {
+      debugPrint("Firestore Update Category Error: $e");
+      return 'Lỗi khi cập nhật danh mục: $e';
     }
   }
 

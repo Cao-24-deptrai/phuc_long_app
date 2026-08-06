@@ -507,81 +507,96 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
     final maxVal = dataMap.values.fold(0.0, (max, v) => v > max ? v : max);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.dividerColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Tab Folder Header (Nằm ngoài khung phía trên bên phải như hình thư mục)
+        Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              border: Border.all(color: AppTheme.dividerColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTimeframeChip('day', 'Ngày'),
+                _buildTimeframeChip('month', 'Tháng'),
+                _buildTimeframeChip('year', 'Năm'),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Title & Timeframe Chip
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ),
+
+        // Khung Thống kê Doanh Thu (Thân thư mục)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topRight: Radius.circular(4),
+            ),
+            border: Border.all(color: AppTheme.dividerColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Thống kê Doanh thu',
                 style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
               ),
-              // Segmented Filter Control (Ngày / Tháng / Năm)
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: AppTheme.backgroundColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.dividerColor),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildTimeframeChip('day', 'Ngày'),
-                    _buildTimeframeChip('month', 'Tháng'),
-                    _buildTimeframeChip('year', 'Năm'),
-                  ],
-                ),
-              ),
-            ],
-          ),
 
-          // Row 2: Date Range Picker Chip (Format: dd/mm/yyyy - dd/mm/yyyy)
-          if (_revenueTimeframe == 'day') ...[
-            const SizedBox(height: 10),
-            InkWell(
-              onTap: _pickCustomDateRange,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.08),
+              // Date Range Picker Chip (Format: dd/mm/yyyy - dd/mm/yyyy)
+              if (_revenueTimeframe == 'day') ...[
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _pickCustomDateRange,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primaryColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$startStr - $endStr',
-                      style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.edit_calendar_rounded, size: 14, color: AppTheme.primaryColor),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primaryColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$startStr - $endStr',
+                          style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.edit_calendar_rounded, size: 14, color: AppTheme.primaryColor),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
+              ],
+              const SizedBox(height: 20),
 
           // Chart Display
           SizedBox(
@@ -640,7 +655,9 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           ),
         ],
       ),
-    );
+    ),
+  ],
+);
   }
 
   Widget _buildTimeframeChip(String type, String label) {

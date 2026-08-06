@@ -835,13 +835,13 @@ class AppState extends ChangeNotifier {
   List<Order> _orders = [];
 
   List<Order> get orders {
-    if (_currentRole == 'admin') {
-      return _orders;
-    }
-
     final email = _currentUser?.email.trim().toLowerCase() ?? '';
     final uname = _currentUser?.username.trim().toLowerCase() ?? '';
     final name = _currentUser?.name.trim().toLowerCase() ?? '';
+
+    if (email.isEmpty && uname.isEmpty && name.isEmpty) {
+      return [];
+    }
 
     return _orders.where((o) {
       final oEmail = o.userEmail.trim().toLowerCase();

@@ -27,6 +27,57 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   bool _hasSearched = false;
   UserModel? _foundUser;
   bool _selectedIsAdminRole = false;
+  String _revenueTimeframe = 'day'; // 'day', 'month', 'year'
+  DateTimeRange _selectedDateRange = DateTimeRange(
+    start: DateTime.now().subtract(const Duration(days: 6)),
+    end: DateTime.now(),
+  );
+
+  Future<void> _pickCustomDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _selectedDateRange,
+      firstDate: DateTime(2023),
+      lastDate: DateTime(2030),
+      helpText: 'CHỌN KHOẢNG NGÀY THỐNG KÊ (TỐI ĐA 7 NGÀY)',
+      saveText: 'ÁP DỤNG',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final daysDiff = picked.end.difference(picked.start).inDays + 1;
+      if (daysDiff > 7) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Khoảng ngày thống kê tối đa là 7 ngày! Đã tự chọn 7 ngày tính từ ${picked.start.day}/${picked.start.month}.', style: GoogleFonts.beVietnamPro()),
+            backgroundColor: Colors.deepOrangeAccent,
+          ),
+        );
+        setState(() {
+          _selectedDateRange = DateTimeRange(
+            start: picked.start,
+            end: picked.start.add(const Duration(days: 6)),
+          );
+        });
+      } else {
+        setState(() {
+          _selectedDateRange = picked;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -185,7 +236,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           ),
           const SizedBox(height: 16),
 
-          // Overview Stats Cards
+          // Overview Stats Cards (Giữ nguyên)
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -220,41 +271,18 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               ),
             ],
           ),
-          const SizedBox(height: 28),
-
-          // Custom Sales Chart
-          Text(
-            'Doanh thu tuần này (nghìn đồng)',
-            style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.dividerColor),
-            ),
-            child: SizedBox(
-              height: 200,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _buildBarChartColumn('Th 2', 450, 0.45),
-                  _buildBarChartColumn('Th 3', 720, 0.72),
-                  _buildBarChartColumn('Th 4', 600, 0.60),
-                  _buildBarChartColumn('Th 5', 850, 0.85),
-                  _buildBarChartColumn('Th 6', 950, 0.95),
-                  _buildBarChartColumn('Th 7', 1200, 1.0),
-                  _buildBarChartColumn('CN', 1100, 0.90),
-                ],
-              ),
-            ),
-          ),
-          
           const SizedBox(height: 24),
-          
+
+          // 1. Interactive Bar Chart: Revenue by Day / Month / Year
+          _buildRevenueChartSection(),
+
+          const SizedBox(height: 24),
+
+          // 2. Donut / Pie Chart: Order Status (Đang giao, Đã hủy, Đã giao)
+          _buildOrderStatusPieChartSection(),
+
+          const SizedBox(height: 24),
+
           // Latest Active Orders
           Text(
             'Đơn hàng gần đây (Cloud Firestore)',
@@ -304,6 +332,376 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     );
   }
 
+  Widget _buildRevenueChartSection() {
+    final Map<String, double> dataMap = {};
+    final orders = _appState.allOrdersForAdmin;
+
+    final startStr = '${_selectedDateRange.start.day.toString().padLeft(2, '0')}/${_selectedDateRange.start.month.toString().padLeft(2, '0')}/${_selectedDateRange.start.year}';
+    final endStr = '${_selectedDateRange.end.day.toString().padLeft(2, '0')}/${_selectedDateRange.end.month.toString().padLeft(2, '0')}/${_selectedDateRange.end.year}';
+
+    if (_revenueTimeframe == 'day') {
+      final start = _selectedDateRange.start;
+      final end = _selectedDateRange.end;
+      final daysCount = end.difference(start).inDays + 1;
+
+      for (int i = 0; i < daysCount; i++) {
+        final d = start.add(Duration(days: i));
+        final key = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+        dataMap[key] = 0.0;
+      }
+
+      for (var order in orders) {
+        if (order.status == 'Đã hoàn thành') {
+          final oDate = DateTime(order.date.year, order.date.month, order.date.day);
+          final startDateOnly = DateTime(start.year, start.month, start.day);
+          final endDateOnly = DateTime(end.year, end.month, end.day);
+          if ((oDate.isAfter(startDateOnly) || oDate.isAtSameMomentAs(startDateOnly)) &&
+              (oDate.isBefore(endDateOnly) || oDate.isAtSameMomentAs(endDateOnly))) {
+            final key = '${oDate.day.toString().padLeft(2, '0')}/${oDate.month.toString().padLeft(2, '0')}';
+            if (dataMap.containsKey(key)) {
+              dataMap[key] = (dataMap[key] ?? 0.0) + order.total;
+            }
+          }
+        }
+      }
+    } else if (_revenueTimeframe == 'month') {
+      final List<String> months = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+      for (var m in months) {
+        dataMap[m] = 0.0;
+      }
+      for (var order in orders) {
+        if (order.status == 'Đã hoàn thành') {
+          final mKey = 'T${order.date.month}';
+          if (dataMap.containsKey(mKey)) {
+            dataMap[mKey] = (dataMap[mKey] ?? 0.0) + order.total;
+          }
+        }
+      }
+    } else {
+      final List<String> years = ['2024', '2025', '2026'];
+      for (var y in years) {
+        dataMap[y] = 0.0;
+      }
+      for (var order in orders) {
+        if (order.status == 'Đã hoàn thành') {
+          final yKey = '${order.date.year}';
+          if (dataMap.containsKey(yKey)) {
+            dataMap[yKey] = (dataMap[yKey] ?? 0.0) + order.total;
+          }
+        }
+      }
+    }
+
+    final maxVal = dataMap.values.fold(0.0, (max, v) => v > max ? v : max);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Title & Timeframe Chip
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Thống kê Doanh thu',
+                style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+              ),
+              // Segmented Filter Control (Ngày / Tháng / Năm)
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.dividerColor),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTimeframeChip('day', 'Ngày'),
+                    _buildTimeframeChip('month', 'Tháng'),
+                    _buildTimeframeChip('year', 'Năm'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Row 2: Date Range Picker Chip (Format: dd/mm/yyyy - dd/mm/yyyy)
+          if (_revenueTimeframe == 'day') ...[
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _pickCustomDateRange,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$startStr - $endStr',
+                      style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.edit_calendar_rounded, size: 14, color: AppTheme.primaryColor),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+
+          // Chart Display
+          SizedBox(
+            height: 210,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: dataMap.entries.map((entry) {
+                  final ratio = maxVal > 0 ? entry.value / maxVal : 0.0;
+                  final formattedVal = _formatShortValue(entry.value);
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          formattedVal,
+                          style: GoogleFonts.beVietnamPro(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        ),
+                        const SizedBox(height: 6),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: ratio),
+                          duration: const Duration(milliseconds: 800),
+                          curve: Curves.fastOutSlowIn,
+                          builder: (context, val, child) {
+                            return Container(
+                              width: _revenueTimeframe == 'month' ? 20 : 32,
+                              height: 140 * (val < 0.03 ? 0.03 : val),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: entry.value > 0
+                                      ? [AppTheme.primaryColor, const Color(0xFF1EA85E)]
+                                      : [Colors.grey.shade300, Colors.grey.shade400],
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          entry.key,
+                          style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppTheme.textDark, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeframeChip(String type, String label) {
+    final isSelected = _revenueTimeframe == type;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _revenueTimeframe = type;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.beVietnamPro(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : AppTheme.textLight,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatShortValue(double val) {
+    if (val <= 0) return '0đ';
+    if (val >= 1000000000) {
+      return '${(val / 1000000000).toStringAsFixed(1)}B';
+    } else if (val >= 1000000) {
+      return '${(val / 1000000).toStringAsFixed(1)}M';
+    } else if (val >= 1000) {
+      return '${(val / 1000).toStringAsFixed(0)}k';
+    }
+    return val.toStringAsFixed(0);
+  }
+
+  Widget _buildOrderStatusPieChartSection() {
+    final orders = _appState.allOrdersForAdmin;
+    int delivered = 0;
+    int shipping = 0;
+    int cancelled = 0;
+
+    for (var o in orders) {
+      if (o.status == 'Đã hoàn thành') {
+        delivered++;
+      } else if (o.status == 'Hủy') {
+        cancelled++;
+      } else {
+        shipping++;
+      }
+    }
+
+    final totalCount = delivered + shipping + cancelled;
+    final delPercent = totalCount > 0 ? (delivered / totalCount * 100).toStringAsFixed(0) : '0';
+    final shipPercent = totalCount > 0 ? (shipping / totalCount * 100).toStringAsFixed(0) : '0';
+    final canPercent = totalCount > 0 ? (cancelled / totalCount * 100).toStringAsFixed(0) : '0';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Thống kê Đơn hàng theo Trạng thái',
+            style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+          ),
+          const SizedBox(height: 20),
+
+          Row(
+            children: [
+              // Donut / Pie Chart Visual
+              SizedBox(
+                width: 130,
+                height: 130,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: const Size(130, 130),
+                      painter: PieChartPainter(
+                        values: [delivered.toDouble(), shipping.toDouble(), cancelled.toDouble()],
+                        colors: const [
+                          AppTheme.primaryColor,
+                          AppTheme.goldColor,
+                          Colors.redAccent,
+                        ],
+                      ),
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$totalCount',
+                          style: GoogleFonts.beVietnamPro(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                        ),
+                        Text(
+                          'Đơn hàng',
+                          style: GoogleFonts.beVietnamPro(fontSize: 10, color: AppTheme.textLight, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+
+              // Legend and Details
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildPieLegendItem('Đã giao', '$delivered đơn ($delPercent%)', AppTheme.primaryColor),
+                    const SizedBox(height: 10),
+                    _buildPieLegendItem('Đang xử lý', '$shipping đơn ($shipPercent%)', AppTheme.goldColor),
+                    const SizedBox(height: 10),
+                    _buildPieLegendItem('Đã hủy', '$cancelled đơn ($canPercent%)', Colors.redAccent),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPieLegendItem(String label, String detail, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+              ),
+              Text(
+                detail,
+                style: GoogleFonts.beVietnamPro(fontSize: 11, color: AppTheme.textLight),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStatCard(String title, String val, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -333,37 +731,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           Text(val, style: GoogleFonts.beVietnamPro(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
         ],
       ),
-    );
-  }
-
-  Widget _buildBarChartColumn(String day, int val, double ratio) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text('$val', style: const TextStyle(fontSize: 9, color: AppTheme.textLight, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: ratio),
-          duration: const Duration(milliseconds: 1000),
-          curve: Curves.fastOutSlowIn,
-          builder: (context, val, child) {
-            return Container(
-              width: 24,
-              height: 120 * val,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryColor, Color(0xFF1EA85E)],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        Text(day, style: GoogleFonts.beVietnamPro(fontSize: 10, color: AppTheme.textDark, fontWeight: FontWeight.w500)),
-      ],
     );
   }
 
@@ -1000,6 +1367,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     final nameController = TextEditingController(text: beverage.name);
     final priceController = TextEditingController(text: CurrencyInputFormatter.format(beverage.price));
     final descController = TextEditingController(text: beverage.description);
+    final imageUrlController = TextEditingController(text: beverage.imageUrl);
     bool isPopular = beverage.isPopular;
 
     showDialog(
@@ -1010,6 +1378,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   controller: nameController,
@@ -1025,6 +1394,58 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     suffixText: 'đ',
                   ),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: imageUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Link hình ảnh (URL)',
+                    hintText: 'https://images.unsplash.com/...',
+                    prefixIcon: const Icon(Icons.image_outlined, color: AppTheme.primaryColor),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.content_paste_rounded, color: AppTheme.primaryColor),
+                      tooltip: 'Dán link ảnh từ bộ nhớ tạm',
+                      onPressed: () async {
+                        final data = await Clipboard.getData(Clipboard.kTextPlain);
+                        if (data != null && data.text != null) {
+                          setDialogState(() {
+                            imageUrlController.text = data.text!.trim();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  onChanged: (val) => setDialogState(() {}),
+                ),
+                if (imageUrlController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.dividerColor),
+                    ),
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrlController.text.trim(),
+                          headers: const {'User-Agent': 'Mozilla/5.0'},
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.broken_image_outlined, color: Colors.redAccent, size: 24),
+                              const SizedBox(height: 2),
+                              Text('Link ảnh không hợp lệ', style: GoogleFonts.beVietnamPro(fontSize: 10, color: Colors.redAccent)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
@@ -1069,6 +1490,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 final updated = beverage.copyWith(
                   name: nameController.text.trim(),
                   price: newPrice,
+                  imageUrl: imageUrlController.text.trim().isNotEmpty ? imageUrlController.text.trim() : beverage.imageUrl,
                   description: descController.text.trim(),
                   isPopular: isPopular,
                 );
@@ -1088,6 +1510,9 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     final nameController = TextEditingController();
     final priceController = TextEditingController();
     final descController = TextEditingController();
+    final imageUrlController = TextEditingController(
+      text: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500&auto=format&fit=crop&q=60',
+    );
     BeverageCategory category = BeverageCategory.tea;
     bool isPopular = false;
 
@@ -1136,6 +1561,58 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 ),
                 const SizedBox(height: 12),
                 TextField(
+                  controller: imageUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Link hình ảnh (URL)',
+                    hintText: 'https://images.unsplash.com/...',
+                    prefixIcon: const Icon(Icons.image_outlined, color: AppTheme.primaryColor),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.content_paste_rounded, color: AppTheme.primaryColor),
+                      tooltip: 'Dán link ảnh từ bộ nhớ tạm',
+                      onPressed: () async {
+                        final data = await Clipboard.getData(Clipboard.kTextPlain);
+                        if (data != null && data.text != null) {
+                          setDialogState(() {
+                            imageUrlController.text = data.text!.trim();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  onChanged: (val) => setDialogState(() {}),
+                ),
+                if (imageUrlController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.dividerColor),
+                    ),
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrlController.text.trim(),
+                          headers: const {'User-Agent': 'Mozilla/5.0'},
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.broken_image_outlined, color: Colors.redAccent, size: 24),
+                              const SizedBox(height: 2),
+                              Text('Link ảnh không hợp lệ', style: GoogleFonts.beVietnamPro(fontSize: 10, color: Colors.redAccent)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextField(
                   controller: descController,
                   keyboardType: TextInputType.multiline,
                   minLines: 3,
@@ -1177,12 +1654,16 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 if (nameController.text.trim().isEmpty || priceController.text.trim().isEmpty) return;
 
                 final price = CurrencyInputFormatter.parse(priceController.text, defaultValue: 50000);
+                final imgUrl = imageUrlController.text.trim().isNotEmpty
+                    ? imageUrlController.text.trim()
+                    : 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500&auto=format&fit=crop&q=60';
+
                 final newBeverage = Beverage(
                   id: 'PL-${DateTime.now().millisecondsSinceEpoch}',
                   name: nameController.text.trim(),
                   category: category,
                   price: price,
-                  imageUrl: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+                  imageUrl: imgUrl,
                   description: descController.text.trim().isNotEmpty
                       ? descController.text.trim()
                       : 'Thức uống Phúc Long đặc trưng thơm ngon mát lạnh.',
@@ -1399,4 +1880,50 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
       ),
     );
   }
+}
+
+class PieChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<Color> colors;
+
+  PieChartPainter({required this.values, required this.colors});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = values.fold(0.0, (sum, v) => sum + v);
+    if (total == 0) {
+      final paint = Paint()
+        ..color = Colors.grey.shade200
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 18.0;
+      canvas.drawCircle(Offset(size.width / 2, size.height / 2), size.width / 2 - 12, paint);
+      return;
+    }
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 12;
+    double startAngle = -3.14159 / 2; // -90 deg
+
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] <= 0) continue;
+      final sweepAngle = (values[i] / total) * 2 * 3.14159;
+      final paint = Paint()
+        ..color = colors[i]
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 18.0
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle + 0.05,
+        sweepAngle - 0.1,
+        false,
+        paint,
+      );
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant PieChartPainter oldDelegate) => true;
 }

@@ -899,7 +899,13 @@ class AppState extends ChangeNotifier {
     final uname = _currentUser!.username.trim().toLowerCase();
     final name = _currentUser!.name.trim().toLowerCase();
 
-    // Check if user has an order with status 'Đã hoàn thành' containing this productId
+    // 1. Check if user has ALREADY posted a review for this product
+    final alreadyReviewed = _reviews.any(
+      (r) => r.productId == productId && r.userEmail.trim().toLowerCase() == email,
+    );
+    if (alreadyReviewed) return false;
+
+    // 2. Check if user has an order with status 'Đã hoàn thành' containing this productId
     for (var order in _orders) {
       final oEmail = order.userEmail.trim().toLowerCase();
       final oName = order.customerName.trim().toLowerCase();
@@ -939,7 +945,7 @@ class AppState extends ChangeNotifier {
 
     // Calculate new average rating for the product
     final productRevs = _reviews.where((r) => r.productId == productId).toList();
-    double avgRating = productRevs.fold(0.0, (sum, r) => sum + r.rating) / productRevs.length;
+    double avgRating = productRevs.isEmpty ? 5.0 : productRevs.fold(0.0, (sum, r) => sum + r.rating) / productRevs.length;
     avgRating = double.parse(avgRating.toStringAsFixed(1));
 
     // Update beverage rating in memory
@@ -957,6 +963,79 @@ class AppState extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint("Firestore Add Review Error: $e");
+    }
+  }
+
+  Future<void> editReview({
+    required String reviewId,
+    required String productId,
+    required double rating,
+    required String comment,
+  }) async {
+    final index = _reviews.indexWhere((r) => r.id == reviewId);
+    if (index != -1) {
+      final old = _reviews[index];
+      _reviews[index] = Review(
+        id: old.id,
+        productId: old.productId,
+        userEmail: old.userEmail,
+        userName: old.userName,
+        userAvatar: _currentUser?.avatarUrl.isNotEmpty == true ? _currentUser!.avatarUrl : old.userAvatar,
+        rating: rating,
+        comment: comment,
+        date: DateTime.now(),
+      );
+
+      // Recalculate beverage average rating
+      final productRevs = _reviews.where((r) => r.productId == productId).toList();
+      double avgRating = productRevs.isEmpty ? 5.0 : productRevs.fold(0.0, (sum, r) => sum + r.rating) / productRevs.length;
+      avgRating = double.parse(avgRating.toStringAsFixed(1));
+
+      final bevIndex = _beverages.indexWhere((b) => b.id == productId);
+      if (bevIndex != -1) {
+        _beverages[bevIndex] = _beverages[bevIndex].copyWith(rating: avgRating);
+      }
+
+      notifyListeners();
+
+      try {
+        await FirebaseFirestore.instance.collection('reviews').doc(reviewId).update({
+          'rating': rating,
+          'comment': comment,
+          'userAvatar': _currentUser?.avatarUrl ?? old.userAvatar,
+          'date': DateTime.now().toIso8601String(),
+        });
+        await FirebaseFirestore.instance.collection('beverages').doc(productId).update({
+          'rating': avgRating,
+        });
+      } catch (e) {
+        debugPrint("Firestore Edit Review Error: $e");
+      }
+    }
+  }
+
+  Future<void> deleteReview(String reviewId, String productId) async {
+    _reviews.removeWhere((r) => r.id == reviewId);
+
+    // Recalculate beverage average rating
+    final productRevs = _reviews.where((r) => r.productId == productId).toList();
+    double avgRating = productRevs.isEmpty ? 5.0 : productRevs.fold(0.0, (sum, r) => sum + r.rating) / productRevs.length;
+    avgRating = double.parse(avgRating.toStringAsFixed(1));
+
+    final bevIndex = _beverages.indexWhere((b) => b.id == productId);
+    if (bevIndex != -1) {
+      _beverages[bevIndex] = _beverages[bevIndex].copyWith(rating: avgRating);
+    }
+
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('reviews').doc(reviewId).delete();
+      await FirebaseFirestore.instance.collection('beverages').doc(productId).update({
+        'rating': avgRating,
+      });
+    } catch (e) {
+      debugPrint("Firestore Delete Review Error: $e");
     }
   }
 }

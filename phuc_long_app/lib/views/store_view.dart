@@ -1173,6 +1173,10 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
       currentAvatarUrl = appState.currentUser!.avatarUrl.trim();
     }
 
+    final currentUser = appState.currentUser;
+    final isMyReview = currentUser != null && currentUser.email.trim().toLowerCase() == uKey;
+    final isAdmin = currentUser != null && currentUser.isAdmin;
+
     final dateStr = '${review.date.day.toString().padLeft(2, '0')}/${review.date.month.toString().padLeft(2, '0')}/${review.date.year} ${review.date.hour.toString().padLeft(2, '0')}:${review.date.minute.toString().padLeft(2, '0')}';
 
     return Container(
@@ -1249,6 +1253,25 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                   ],
                 ),
               ),
+
+              // Edit / Delete buttons for Review author or Admin
+              if (isMyReview || isAdmin) ...[
+                if (isMyReview)
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryColor, size: 18),
+                    tooltip: 'Sửa đánh giá',
+                    onPressed: () => _showEditReviewDialog(context, review),
+                  ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                  tooltip: 'Xóa đánh giá',
+                  onPressed: () => _confirmDeleteReview(context, review),
+                ),
+              ],
             ],
           ),
           if (review.comment.isNotEmpty) ...[
@@ -1263,9 +1286,175 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
     );
   }
 
+  void _showEditReviewDialog(BuildContext context, Review review) {
+    double editRating = review.rating;
+    final commentController = TextEditingController(text: review.comment);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Chỉnh sửa đánh giá', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Chọn số sao:', style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const SizedBox(width: 8),
+                    Row(
+                      children: List.generate(5, (index) {
+                        final starVal = index + 1.0;
+                        return IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          icon: Icon(
+                            starVal <= editRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                            color: Colors.amber,
+                            size: 22,
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              editRating = starVal;
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: commentController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Nội dung bình luận',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                final comment = commentController.text.trim();
+                if (comment.isEmpty) return;
+                final nav = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                await AppState().editReview(
+                  reviewId: review.id,
+                  productId: review.productId,
+                  rating: editRating,
+                  comment: comment,
+                );
+                nav.pop();
+                if (!mounted) return;
+                setState(() {});
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Đã cập nhật đánh giá thành công!', style: GoogleFonts.beVietnamPro()),
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                );
+              },
+              child: Text('Cập nhật', style: GoogleFonts.beVietnamPro(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteReview(BuildContext context, Review review) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Xóa đánh giá', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc chắn muốn xóa đánh giá này không?', style: GoogleFonts.beVietnamPro()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              await AppState().deleteReview(review.id, review.productId);
+              nav.pop();
+              if (!mounted) return;
+              setState(() {});
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text('Đã xóa đánh giá thành công!', style: GoogleFonts.beVietnamPro()),
+                  backgroundColor: AppTheme.primaryColor,
+                ),
+              );
+            },
+            child: Text('Xóa', style: GoogleFonts.beVietnamPro(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddReviewSection() {
     final appState = AppState();
+    final currentUserEmail = appState.currentUser?.email.trim().toLowerCase() ?? '';
+    final hasReviewed = appState.reviews.any(
+      (r) => r.productId == widget.beverage.id && r.userEmail.trim().toLowerCase() == currentUserEmail,
+    );
     final canReview = appState.canUserReviewProduct(widget.beverage.id);
+
+    if (hasReviewed) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_outline_rounded, color: Colors.blue, size: 26),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Đã gửi đánh giá',
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Bạn đã đánh giá sản phẩm này rồi (Mỗi tài khoản chỉ được đánh giá 1 lần). Bạn có thể sửa hoặc xóa đánh giá của mình ở danh sách bên trên.',
+                    style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textDark, height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (!canReview) {
       return Container(

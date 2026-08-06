@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import '../widgets/currency_formatter.dart';
 import 'login_view.dart';
+import 'main_page.dart';
 
 class AdminView extends StatefulWidget {
   const AdminView({super.key});
@@ -154,12 +155,124 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     );
   }
 
+  void _toggleUserLock() async {
+    if (_foundUser == null) return;
+    final targetEmail = _foundUser!.email;
+    final isLockedNow = _foundUser!.isLocked;
+    final actionText = isLockedNow ? 'MỞ KHÓA' : 'KHÓA';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Xác nhận $actionText tài khoản', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+        content: Text(
+          isLockedNow
+              ? 'Bạn có muốn mở khóa tài khoản "$targetEmail" để người dùng tiếp tục đăng nhập?'
+              : 'Bạn có chắc chắn muốn KHÓA tài khoản "$targetEmail"? Người dùng này sẽ bị chặn đăng nhập vào ứng dụng.',
+          style: GoogleFonts.beVietnamPro(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isLockedNow ? AppTheme.primaryColor : Colors.orangeAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(actionText, style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _appState.toggleUserLock(targetEmail);
+      if (!mounted) return;
+      setState(() {
+        _foundUser!.isLocked = !_foundUser!.isLocked;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đã ${_foundUser!.isLocked ? "KHÓA" : "MỞ KHÓA"} tài khoản $targetEmail thành công!',
+            style: GoogleFonts.beVietnamPro(),
+          ),
+          backgroundColor: _foundUser!.isLocked ? Colors.orangeAccent : AppTheme.primaryColor,
+        ),
+      );
+    }
+  }
+
+  void _deleteUserAccount() async {
+    if (_foundUser == null) return;
+    final targetEmail = _foundUser!.email;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Xác nhận XÓA TÀI KHOẢN', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+        content: Text(
+          '⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA VĨNH VIỄN TÀI KHOẢN "$targetEmail"? Hành động này không thể hoàn tác.',
+          style: GoogleFonts.beVietnamPro(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('XÓA VĨNH VIỄN', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _appState.deleteUserAccount(targetEmail);
+      if (!mounted) return;
+      setState(() {
+        _foundUser = null;
+        _hasSearched = true;
+        _searchEmailController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đã xóa tài khoản $targetEmail khỏi hệ thống!',
+            style: GoogleFonts.beVietnamPro(),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const PhucLongLogo(size: 34),
         centerTitle: true,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 6.0),
+          child: IconButton(
+            icon: const Icon(Icons.storefront_rounded, color: AppTheme.primaryColor, size: 24),
+            tooltip: 'Chuyển sang giao diện Cửa Hàng (User)',
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const MainPage()),
+              );
+            },
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppTheme.textLight),
@@ -1245,23 +1358,43 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: const BoxDecoration(
-                            color: AppTheme.primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              _foundUser!.name.isNotEmpty ? _foundUser!.name.substring(0, 1).toUpperCase() : 'U',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.goldColor,
+                        Builder(
+                          builder: (context) {
+                            final liveUser = _appState.users[_foundUser!.email.toLowerCase()] ?? _foundUser!;
+                            final avatarUrl = liveUser.avatarUrl.trim();
+                            final fallbackWidget = Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: _foundUser!.isLocked ? Colors.redAccent : AppTheme.primaryColor,
+                                shape: BoxShape.circle,
                               ),
-                            ),
-                          ),
+                              child: Center(
+                                child: Text(
+                                  _foundUser!.name.isNotEmpty ? _foundUser!.name.substring(0, 1).toUpperCase() : 'U',
+                                  style: GoogleFonts.beVietnamPro(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.goldColor,
+                                  ),
+                                ),
+                              ),
+                            );
+
+                            if (avatarUrl.isNotEmpty) {
+                              return ClipOval(
+                                child: Image.network(
+                                  avatarUrl,
+                                  headers: const {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => fallbackWidget,
+                                ),
+                              );
+                            }
+                            return fallbackWidget;
+                          },
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -1280,20 +1413,42 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _foundUser!.isAdmin ? AppTheme.goldColor.withOpacity(0.12) : AppTheme.primaryColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _foundUser!.isAdmin ? 'Admin' : 'User',
-                            style: GoogleFonts.beVietnamPro(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _foundUser!.isAdmin ? AppTheme.goldColor : AppTheme.primaryColor,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _foundUser!.isAdmin ? AppTheme.goldColor.withOpacity(0.12) : AppTheme.primaryColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _foundUser!.isAdmin ? 'Admin' : 'User',
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _foundUser!.isAdmin ? AppTheme.goldColor : AppTheme.primaryColor,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _foundUser!.isLocked ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: _foundUser!.isLocked ? Colors.red.withOpacity(0.3) : Colors.green.withOpacity(0.3)),
+                              ),
+                              child: Text(
+                                _foundUser!.isLocked ? '🔒 Đã bị khóa' : '✅ Hoạt động',
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: _foundUser!.isLocked ? Colors.redAccent : Colors.green,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -1336,7 +1491,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                       },
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
                     SizedBox(
                       width: double.infinity,
@@ -1352,6 +1507,62 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                           elevation: 0,
                         ),
                       ),
+                    ),
+
+                    const Divider(height: 32, color: AppTheme.dividerColor),
+
+                    Text(
+                      'Tùy chọn quản lý trạng thái & tài khoản:',
+                      style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _toggleUserLock,
+                            icon: Icon(
+                              _foundUser!.isLocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                              size: 18,
+                              color: _foundUser!.isLocked ? Colors.green : Colors.orangeAccent,
+                            ),
+                            label: Text(
+                              _foundUser!.isLocked ? 'Mở Khóa' : 'Khóa Tài Khoản',
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _foundUser!.isLocked ? Colors.green : Colors.orangeAccent,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(color: _foundUser!.isLocked ? Colors.green : Colors.orangeAccent),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _deleteUserAccount,
+                            icon: const Icon(Icons.delete_forever_rounded, size: 18, color: Colors.redAccent),
+                            label: Text(
+                              'Xóa Tài Khoản',
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(color: Colors.redAccent),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import 'change_pass_view.dart';
 import 'login_view.dart';
+import 'admin_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -581,6 +582,29 @@ class _ProfileViewState extends State<ProfileView> {
                       const SizedBox(height: 16),
                       
                       // Quick actions
+                      if (user.isAdmin) ...[
+                        Card(
+                          margin: EdgeInsets.zero,
+                          elevation: 0,
+                          color: AppTheme.primaryColor.withOpacity(0.06),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.2)),
+                          ),
+                          child: ListTile(
+                            leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primaryColor),
+                            title: Text('Trang Quản Trị Admin', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                            subtitle: Text('Chuyển sang giao diện quản lý Admin', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.primaryColor),
+                            onTap: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(builder: (context) => const AdminView()),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       Card(
                         margin: EdgeInsets.zero,
                         elevation: 0,

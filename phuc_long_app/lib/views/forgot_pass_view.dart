@@ -287,7 +287,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Nhập email đã đăng ký. Hệ thống từ mottaikhoanphu102@gmail.com sẽ gửi mã OTP xác minh khôi phục mật khẩu cho bạn.',
+                  'Nhập email đã đăng ký. Hệ thống sẽ gửi mã OTP xác minh khôi phục mật khẩu cho bạn.',
                   style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
@@ -380,7 +380,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Mã OTP 6 chữ số đã được gửi tự động từ mottaikhoanphu102@gmail.com đến ${_emailController.text.trim()}.',
+                  'Mã OTP 6 chữ số đã được gửi tự động đến ${_emailController.text.trim()}.',
                   style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight, height: 1.4),
                   textAlign: TextAlign.center,
                 ),

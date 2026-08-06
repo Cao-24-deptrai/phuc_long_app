@@ -7,6 +7,7 @@ import '../models/review.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import '../widgets/shimmer_banner.dart';
+import '../widgets/phuclong_image_banner.dart';
 import 'login_view.dart';
 
 class StoreView extends StatefulWidget {
@@ -251,6 +252,10 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                           ),
                         ),
                       ),
+                      const SizedBox(height: 20),
+
+                      // Auto-Scrolling Web Phúc Long Banner
+                      const PhucLongImageBanner(),
                       const SizedBox(height: 20),
 
                       // Shimmer Carousel Banner

@@ -120,7 +120,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
     } else {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Tên đăng nhập / Email hoặc Mật khẩu không chính xác.';
+        _errorMessage = AppState().lastLoginError ?? 'Tên đăng nhập / Email hoặc Mật khẩu không chính xác.';
       });
     }
   }

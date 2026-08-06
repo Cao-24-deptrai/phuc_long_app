@@ -7,6 +7,7 @@ class UserModel {
   String address;
   String avatarUrl;
   bool isAdmin;
+  bool isLocked;
 
   UserModel({
     required this.username,
@@ -17,6 +18,7 @@ class UserModel {
     this.address = '',
     this.avatarUrl = '',
     this.isAdmin = false,
+    this.isLocked = false,
   });
 
   UserModel copyWith({
@@ -27,6 +29,7 @@ class UserModel {
     String? address,
     String? avatarUrl,
     bool? isAdmin,
+    bool? isLocked,
   }) {
     return UserModel(
       username: username ?? this.username,
@@ -37,6 +40,7 @@ class UserModel {
       address: address ?? this.address,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       isAdmin: isAdmin ?? this.isAdmin,
+      isLocked: isLocked ?? this.isLocked,
     );
   }
 
@@ -50,6 +54,7 @@ class UserModel {
       'address': address,
       'avatarUrl': avatarUrl,
       'isAdmin': isAdmin,
+      'isLocked': isLocked,
     };
   }
 
@@ -66,6 +71,7 @@ class UserModel {
       address: map['address'] ?? '',
       avatarUrl: map['avatarUrl'] ?? '',
       isAdmin: map['isAdmin'] ?? false,
+      isLocked: map['isLocked'] ?? false,
     );
   }
 }

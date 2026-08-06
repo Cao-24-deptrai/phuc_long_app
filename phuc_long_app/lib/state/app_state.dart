@@ -192,8 +192,12 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
+  String? _lastLoginError;
+  String? get lastLoginError => _lastLoginError;
+
   /// Login with either Username OR Email
   Future<bool> login(String input, String password) async {
+    _lastLoginError = null;
     final cleanInput = input.trim().toLowerCase();
     if (cleanInput.isEmpty || password.isEmpty) return false;
 
@@ -201,6 +205,11 @@ class AppState extends ChangeNotifier {
     UserModel? user = await findUserByEmail(cleanInput);
 
     if (user != null) {
+      if (user.isLocked) {
+        _lastLoginError = 'Tài khoản của bạn đã bị KHÓA bởi Quản trị viên.';
+        return false;
+      }
+
       // Direct local password match check
       if (user.password == password) {
         _currentUser = user;
@@ -554,6 +563,42 @@ class AppState extends ChangeNotifier {
     }
 
     return true;
+  }
+
+  Future<void> toggleUserLock(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final user = await findUserByEmail(cleanEmail);
+    if (user != null) {
+      user.isLocked = !user.isLocked;
+      _users[user.email] = user;
+      notifyListeners();
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.email)
+            .set({'isLocked': user.isLocked}, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint("Firebase Toggle Lock Error: $e");
+      }
+    }
+  }
+
+  Future<bool> deleteUserAccount(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    _users.remove(cleanEmail);
+    if (_currentUser?.email.toLowerCase() == cleanEmail) {
+      _currentUser = null;
+    }
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(cleanEmail).delete();
+      return true;
+    } catch (e) {
+      debugPrint("Firebase Delete User Error: $e");
+      return true;
+    }
   }
 
   // -------------------------------------------------------------

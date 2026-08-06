@@ -333,8 +333,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   Widget _buildDashboardTab() {
     final completedOrders = _appState.allOrdersForAdmin.where((o) => o.status == 'Đã hoàn thành').toList();
     final double totalRevenue = completedOrders.fold(0.0, (sum, o) => sum + o.total);
-    final pendingOrdersCount = _appState.allOrdersForAdmin.where((o) => o.status == 'Chờ xử lý' || o.status == 'Đang xử lý' || o.status == 'Đang chuẩn bị').length;
-    final totalProducts = _appState.allBeveragesForAdmin.length;
     final totalPromos = _appState.allPromotionsForAdmin.length;
 
     return SingleChildScrollView(
@@ -349,38 +347,25 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           ),
           const SizedBox(height: 16),
 
-          // Overview Stats Cards (Giữ nguyên)
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+          // Overview Stats Cards (Chỉ giữ Doanh thu và Mã khuyến mãi)
+          Row(
             children: [
-              _buildStatCard(
-                'Doanh thu (Đã Giao)',
-                '${totalRevenue.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ',
-                Icons.monetization_on_outlined,
-                Colors.green,
+              Expanded(
+                child: _buildStatCard(
+                  'Doanh thu (Đã Giao)',
+                  '${totalRevenue.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ',
+                  Icons.monetization_on_outlined,
+                  Colors.green,
+                ),
               ),
-              _buildStatCard(
-                'Đơn hàng mới',
-                '$pendingOrdersCount đơn',
-                Icons.hourglass_empty_rounded,
-                AppTheme.goldColor,
-              ),
-              _buildStatCard(
-                'Tổng sản phẩm',
-                '$totalProducts món',
-                Icons.local_cafe_outlined,
-                AppTheme.primaryColor,
-              ),
-              _buildStatCard(
-                'Mã khuyến mãi',
-                '$totalPromos mã',
-                Icons.card_giftcard_rounded,
-                Colors.deepOrangeAccent,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'Mã khuyến mãi',
+                  '$totalPromos mã',
+                  Icons.card_giftcard_rounded,
+                  Colors.deepOrangeAccent,
+                ),
               ),
             ],
           ),
@@ -396,49 +381,109 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
 
           const SizedBox(height: 24),
 
-          // Latest Active Orders
+          // 3. Donut / Pie Chart: Products by Category
+          _buildProductCategoryPieChartSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductCategoryPieChartSection() {
+    final beverages = _appState.allBeveragesForAdmin;
+    final Map<String, int> catCounts = {};
+
+    for (var b in beverages) {
+      String catLabel = b.categoryDisplayName;
+      catCounts[catLabel] = (catCounts[catLabel] ?? 0) + 1;
+    }
+
+    final totalCount = beverages.length;
+    final colors = [
+      AppTheme.primaryColor,
+      AppTheme.goldColor,
+      Colors.deepOrangeAccent,
+      Colors.purpleAccent,
+      Colors.teal,
+      Colors.blueAccent,
+    ];
+
+    final entries = catCounts.entries.toList();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            'Đơn hàng gần đây (Cloud Firestore)',
+            'Thống kê Sản phẩm theo Danh mục',
             style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
-          const SizedBox(height: 12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _appState.orders.length > 3 ? 3 : _appState.orders.length,
-            itemBuilder: (context, index) {
-              final order = _appState.orders[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  title: Text(order.id, style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${order.customerName} • ${order.items.length} món', style: GoogleFonts.beVietnamPro(fontSize: 12)),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: order.status == 'Đã hoàn thành'
-                          ? Colors.green.withOpacity(0.1)
-                          : order.status == 'Hủy'
-                              ? Colors.red.withOpacity(0.1)
-                              : AppTheme.goldColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      order.status,
-                      style: GoogleFonts.beVietnamPro(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: order.status == 'Đã hoàn thành'
-                            ? Colors.green
-                            : order.status == 'Hủy'
-                                ? Colors.red
-                                : AppTheme.goldColor,
+          const SizedBox(height: 20),
+
+          Row(
+            children: [
+              // Donut / Pie Chart Visual
+              SizedBox(
+                width: 130,
+                height: 130,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: const Size(130, 130),
+                      painter: PieChartPainter(
+                        values: entries.map((e) => e.value.toDouble()).toList(),
+                        colors: List.generate(entries.length, (i) => colors[i % colors.length]),
                       ),
                     ),
-                  ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$totalCount',
+                          style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        ),
+                        Text(
+                          'Sản phẩm',
+                          style: GoogleFonts.beVietnamPro(fontSize: 10, color: AppTheme.textLight),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+              const SizedBox(width: 20),
+
+              // Legend List
+              Expanded(
+                child: Column(
+                  children: List.generate(entries.length, (index) {
+                    final entry = entries[index];
+                    final pct = totalCount > 0 ? (entry.value / totalCount * 100).toStringAsFixed(0) : '0';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: _buildPieLegendItem(
+                        entry.key,
+                        '${entry.value} món ($pct%)',
+                        colors[index % colors.length],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
           ),
         ],
       ),

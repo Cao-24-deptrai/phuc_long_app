@@ -222,7 +222,7 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
                                   labelText: 'Tên đăng nhập hoặc Email',
-                                  hintText: 'khachhang, admin hoặc user@gmail.com',
+                                  hintText: 'Username hoặc Email',
                                   prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppTheme.primaryColor),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),

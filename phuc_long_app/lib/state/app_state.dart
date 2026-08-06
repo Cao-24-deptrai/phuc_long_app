@@ -6,6 +6,7 @@ import '../models/beverage.dart';
 import '../models/user.dart';
 import '../models/promotion.dart';
 import '../models/review.dart';
+import '../models/category.dart';
 
 class AppState extends ChangeNotifier {
   // Singleton pattern
@@ -45,6 +46,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _ordersSub;
   StreamSubscription<QuerySnapshot>? _promotionsSub;
   StreamSubscription<QuerySnapshot>? _reviewsSub;
+  StreamSubscription<QuerySnapshot>? _categoriesSub;
 
   void _initFirestoreListeners() {
     final firestore = FirebaseFirestore.instance;
@@ -108,6 +110,23 @@ class AppState extends ChangeNotifier {
         debugPrint("Firestore Reviews Listener Error: $error");
       },
     );
+
+    // 5. Categories Collection Listener
+    _categoriesSub = firestore.collection('categories').snapshots().listen(
+      (snapshot) {
+        if (snapshot.docs.isEmpty) {
+          _seedCategoriesToFirestore();
+        } else {
+          _categories = snapshot.docs
+              .map((doc) => CategoryModel.fromFirestore(doc))
+              .toList();
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        debugPrint("Firestore Categories Listener Error: $error");
+      },
+    );
   }
 
   Future<void> _seedBeveragesToFirestore() async {
@@ -138,11 +157,55 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> _seedCategoriesToFirestore() async {
+    try {
+      final defaultCats = ['Trà Trái Cây', 'Trà Sữa', 'Cà Phê', 'Món Đặc Biệt / Đá Xay'];
+      final batch = FirebaseFirestore.instance.batch();
+      final collection = FirebaseFirestore.instance.collection('categories');
+      for (var cat in defaultCats) {
+        final docRef = collection.doc();
+        batch.set(docRef, {'id': docRef.id, 'name': cat});
+      }
+      await batch.commit();
+      debugPrint("✅ Initial categories successfully seeded to Cloud Firestore");
+    } catch (e) {
+      debugPrint("⚠️ Seed Categories Error: $e");
+    }
+  }
+
+  // -------------------------------------------------------------
+  // CATEGORIES STATE & FIRESTORE CRUD
+  // -------------------------------------------------------------
+  List<CategoryModel> _categories = [];
+  List<CategoryModel> get categories => _categories;
+
+  Future<void> addCategory(String name) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) return;
+    try {
+      final docRef = FirebaseFirestore.instance.collection('categories').doc();
+      final cat = CategoryModel(id: docRef.id, name: cleanName);
+      await docRef.set(cat.toMap());
+    } catch (e) {
+      debugPrint("Firestore Add Category Error: $e");
+    }
+  }
+
+  Future<void> deleteCategory(String id) async {
+    try {
+      await FirebaseFirestore.instance.collection('categories').doc(id).delete();
+    } catch (e) {
+      debugPrint("Firestore Delete Category Error: $e");
+    }
+  }
+
   @override
   void dispose() {
     _beveragesSub?.cancel();
     _ordersSub?.cancel();
     _promotionsSub?.cancel();
+    _reviewsSub?.cancel();
+    _categoriesSub?.cancel();
     super.dispose();
   }
 

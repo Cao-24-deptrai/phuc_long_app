@@ -89,6 +89,21 @@ class Beverage {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     return Beverage.fromMap(data, doc.id);
   }
+
+  String get categoryDisplayName {
+    switch (category) {
+      case BeverageCategory.tea:
+        return 'Trà Trái Cây';
+      case BeverageCategory.milkTea:
+        return 'Trà Sữa';
+      case BeverageCategory.coffee:
+        return 'Cà Phê';
+      case BeverageCategory.special:
+        return 'Đá Xay / Đặc Biệt';
+      default:
+        return 'Tất Cả';
+    }
+  }
 }
 
 // Initial mock data

@@ -147,9 +147,6 @@ class _ForgotPassViewState extends State<ForgotPassView> {
       return;
     }
 
-    // Automatically send verification confirmation email from mottaikhoanphu102@gmail.com
-    await EmailService().sendPasswordResetSuccessEmail(recipientEmail: email);
-
     if (!mounted) return;
 
     setState(() {
@@ -163,54 +160,26 @@ class _ForgotPassViewState extends State<ForgotPassView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryColor, size: 28),
+            const Icon(Icons.check_circle_outline_rounded, color: AppTheme.primaryColor, size: 28),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Xác Minh Thành Công',
+                'Đổi Mật Khẩu Thành Công',
                 style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: AppTheme.primaryColor, fontSize: 18),
               ),
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mật khẩu tài khoản $email đã được đổi mới thành công!',
-              style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '✉️ Thư xác minh tự động:',
-                    style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '• Người gửi: mottaikhoanphu102@gmail.com\n• Người nhận: $email\n• Trạng thái: Đã gửi thông báo xác nhận thành công.',
-                    style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textDark, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        content: Text(
+          'Mật khẩu cho tài khoản $email đã được cập nhật thành công! Vui lòng sử dụng mật khẩu mới để đăng nhập.',
+          style: GoogleFonts.beVietnamPro(fontSize: 14, color: AppTheme.textDark, height: 1.4),
         ),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: () {
               Navigator.pop(context); // Pop dialog
@@ -535,7 +504,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Tạo mật khẩu mới cho tài khoản. Sau khi xác minh gửi yêu cầu, thư xác minh tự động từ mottaikhoanphu102@gmail.com sẽ được gửi tới email của bạn.',
+                  'Nhập mật khẩu mới cho tài khoản của bạn để hoàn tất quá trình đổi mật khẩu.',
                   style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
@@ -626,7 +595,7 @@ class _ForgotPassViewState extends State<ForgotPassView> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : Text('Gửi Yêu Cầu Xác Minh', style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text('Lưu Mật Khẩu Mới', style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

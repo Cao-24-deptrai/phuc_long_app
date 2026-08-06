@@ -5,6 +5,7 @@ class UserModel {
   String name; // Display name / Họ và tên
   String phone;
   String address;
+  String avatarUrl;
   bool isAdmin;
 
   UserModel({
@@ -14,6 +15,7 @@ class UserModel {
     required this.name,
     this.phone = '',
     this.address = '',
+    this.avatarUrl = '',
     this.isAdmin = false,
   });
 
@@ -23,6 +25,7 @@ class UserModel {
     String? name,
     String? phone,
     String? address,
+    String? avatarUrl,
     bool? isAdmin,
   }) {
     return UserModel(
@@ -32,6 +35,7 @@ class UserModel {
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       isAdmin: isAdmin ?? this.isAdmin,
     );
   }
@@ -44,6 +48,7 @@ class UserModel {
       'name': name,
       'phone': phone,
       'address': address,
+      'avatarUrl': avatarUrl,
       'isAdmin': isAdmin,
     };
   }
@@ -59,6 +64,7 @@ class UserModel {
       name: map['name'] ?? fallbackUsername,
       phone: map['phone'] ?? '',
       address: map['address'] ?? '',
+      avatarUrl: map['avatarUrl'] ?? '',
       isAdmin: map['isAdmin'] ?? false,
     );
   }

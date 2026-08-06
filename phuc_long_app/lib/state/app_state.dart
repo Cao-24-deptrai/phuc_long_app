@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../models/beverage.dart';
 import '../models/user.dart';
 import '../models/promotion.dart';
+import '../models/review.dart';
 
 class AppState extends ChangeNotifier {
   // Singleton pattern
@@ -28,18 +29,8 @@ class AppState extends ChangeNotifier {
       name: 'Quản trị viên',
       isAdmin: true,
     );
-    final customUser = UserModel(
-      username: 'itdk',
-      email: 'nubbieim982@gmail.com',
-      password: '123456',
-      name: 'ng le duy khang',
-      phone: '0987654323',
-      address: '2878 phạm thế hiển',
-    );
-
     _users[defaultUser.email] = defaultUser;
     _users[defaultAdmin.email] = defaultAdmin;
-    _users[customUser.email] = customUser;
 
     // Initial local fallback data
     _beverages = List.from(mockBeverages);
@@ -53,6 +44,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _beveragesSub;
   StreamSubscription<QuerySnapshot>? _ordersSub;
   StreamSubscription<QuerySnapshot>? _promotionsSub;
+  StreamSubscription<QuerySnapshot>? _reviewsSub;
 
   void _initFirestoreListeners() {
     final firestore = FirebaseFirestore.instance;
@@ -103,6 +95,19 @@ class AppState extends ChangeNotifier {
         debugPrint("Firestore Promotions Listener Error: $error");
       },
     );
+
+    // 4. Reviews Collection Listener
+    _reviewsSub = firestore.collection('reviews').orderBy('date', descending: true).snapshots().listen(
+      (snapshot) {
+        _reviews = snapshot.docs
+            .map((doc) => Review.fromFirestore(doc))
+            .toList();
+        notifyListeners();
+      },
+      onError: (error) {
+        debugPrint("Firestore Reviews Listener Error: $error");
+      },
+    );
   }
 
   Future<void> _seedBeveragesToFirestore() async {
@@ -147,6 +152,7 @@ class AppState extends ChangeNotifier {
   // Current logged in user
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
+  Map<String, UserModel> get users => _users;
 
   // Active Role: 'user' or 'admin'
   String _currentRole = 'user';
@@ -473,14 +479,7 @@ class AppState extends ChangeNotifier {
     final cleanInput = input.trim().toLowerCase();
     if (cleanInput.isEmpty) return null;
 
-    // 1. Check in-memory users map
-    for (var u in _users.values) {
-      if (u.email.toLowerCase() == cleanInput || u.username.toLowerCase() == cleanInput) {
-        return u;
-      }
-    }
-
-    // 2. Check Firestore doc by ID (if ID is email)
+    // 1. Check Firestore doc by ID (if ID is email)
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(cleanInput).get();
       if (doc.exists && doc.data() != null) {
@@ -492,7 +491,7 @@ class AppState extends ChangeNotifier {
       debugPrint("Doc lookup error: $e");
     }
 
-    // 3. Query Firestore by username field
+    // 2. Query Firestore by username field
     try {
       final q = await FirebaseFirestore.instance
           .collection('users')
@@ -508,7 +507,7 @@ class AppState extends ChangeNotifier {
       debugPrint("Where username error: $e");
     }
 
-    // 4. Fallback: Scan all users in Firestore collection to guarantee match even if query indexing or casing varies
+    // 3. Fallback: Scan all users in Firestore collection to guarantee match even if query indexing or casing varies
     try {
       final allDocs = await FirebaseFirestore.instance.collection('users').get();
       for (var d in allDocs.docs) {
@@ -523,6 +522,13 @@ class AppState extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Scan users collection error: $e");
+    }
+
+    // 4. Fallback: Check in-memory users map (for offline/default seed users)
+    for (var u in _users.values) {
+      if (u.email.toLowerCase() == cleanInput || u.username.toLowerCase() == cleanInput) {
+        return u;
+      }
     }
 
     return null;
@@ -854,6 +860,103 @@ class AppState extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint("Firestore Update Order Status Error: $e");
+    }
+  }
+
+  // -------------------------------------------------------------
+  // USER AVATAR UPDATE
+  // -------------------------------------------------------------
+  Future<void> updateAvatarUrl(String url) async {
+    final cleanUrl = url.trim();
+    if (_currentUser != null) {
+      _currentUser!.avatarUrl = cleanUrl;
+      _users[_currentUser!.email.toLowerCase()]?.avatarUrl = cleanUrl;
+      notifyListeners();
+
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(_currentUser!.email.toLowerCase()).update({
+          'avatarUrl': cleanUrl,
+        });
+      } catch (e) {
+        debugPrint("Update Avatar Error: $e");
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // REVIEWS & RATINGS STATE & FIRESTORE CRUD
+  // -------------------------------------------------------------
+  List<Review> _reviews = [];
+  List<Review> get reviews => _reviews;
+
+  List<Review> getReviewsForProduct(String productId) {
+    return _reviews.where((r) => r.productId == productId).toList();
+  }
+
+  bool canUserReviewProduct(String productId) {
+    if (_currentUser == null) return false;
+    final email = _currentUser!.email.trim().toLowerCase();
+    final uname = _currentUser!.username.trim().toLowerCase();
+    final name = _currentUser!.name.trim().toLowerCase();
+
+    // Check if user has an order with status 'Đã hoàn thành' containing this productId
+    for (var order in _orders) {
+      final oEmail = order.userEmail.trim().toLowerCase();
+      final oName = order.customerName.trim().toLowerCase();
+      final isOwner = (oEmail.isNotEmpty && (oEmail == email || oEmail == uname)) || (name.isNotEmpty && oName == name);
+
+      if (isOwner && order.status == 'Đã hoàn thành') {
+        for (var item in order.items) {
+          if (item.beverage.id == productId) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  Future<void> addReview({
+    required String productId,
+    required double rating,
+    required String comment,
+  }) async {
+    if (_currentUser == null) return;
+
+    final reviewId = 'REV-${DateTime.now().millisecondsSinceEpoch}';
+    final newReview = Review(
+      id: reviewId,
+      productId: productId,
+      userEmail: _currentUser!.email,
+      userName: _currentUser!.name.isNotEmpty ? _currentUser!.name : _currentUser!.username,
+      userAvatar: _currentUser!.avatarUrl,
+      rating: rating,
+      comment: comment,
+      date: DateTime.now(),
+    );
+
+    _reviews.insert(0, newReview);
+
+    // Calculate new average rating for the product
+    final productRevs = _reviews.where((r) => r.productId == productId).toList();
+    double avgRating = productRevs.fold(0.0, (sum, r) => sum + r.rating) / productRevs.length;
+    avgRating = double.parse(avgRating.toStringAsFixed(1));
+
+    // Update beverage rating in memory
+    final bevIndex = _beverages.indexWhere((b) => b.id == productId);
+    if (bevIndex != -1) {
+      _beverages[bevIndex] = _beverages[bevIndex].copyWith(rating: avgRating);
+    }
+
+    notifyListeners();
+
+    try {
+      await FirebaseFirestore.instance.collection('reviews').doc(newReview.id).set(newReview.toMap());
+      await FirebaseFirestore.instance.collection('beverages').doc(productId).update({
+        'rating': avgRating,
+      });
+    } catch (e) {
+      debugPrint("Firestore Add Review Error: $e");
     }
   }
 }

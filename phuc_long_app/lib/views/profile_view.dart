@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
@@ -73,6 +74,192 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  void _showChangeAvatarDialog() {
+    final user = _appState.currentUser;
+    final urlController = TextEditingController(text: user?.avatarUrl ?? '');
+
+    // Sample Avatar Suggestions for 1-click select
+    final List<Map<String, String>> sampleAvatars = [
+      {
+        'title': 'Capybara 🦫',
+        'url': 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=400&auto=format&fit=crop&q=80',
+      },
+      {
+        'title': 'Mèo Trà Sữa 🐱',
+        'url': 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&auto=format&fit=crop&q=80',
+      },
+      {
+        'title': 'Thanh Lịch 👔',
+        'url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+      },
+      {
+        'title': 'Nữ Tính 🌸',
+        'url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      },
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final cleanUrl = urlController.text.trim();
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              'Đổi ảnh đại diện',
+              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Nhập/dán link ảnh (URL) hoặc chọn mẫu ảnh gợi ý bên dưới:',
+                    style: GoogleFonts.beVietnamPro(fontSize: 13, color: AppTheme.textLight),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Image Preview Box
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.dividerColor),
+                    ),
+                    child: Center(
+                      child: cleanUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                cleanUrl,
+                                headers: const {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const SizedBox(
+                                    width: 100,
+                                    height: 100,
+                                    child: Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor)),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) => Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.broken_image_outlined, color: Colors.redAccent, size: 32),
+                                    const SizedBox(height: 4),
+                                    Text('Không thể tải ảnh từ link này', style: GoogleFonts.beVietnamPro(fontSize: 11, color: Colors.redAccent)),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.image_search_rounded, color: AppTheme.textLight, size: 36),
+                                const SizedBox(height: 4),
+                                Text('Xem trước ảnh đại diện', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // TextField with Paste button
+                  TextField(
+                    controller: urlController,
+                    decoration: InputDecoration(
+                      labelText: 'Link ảnh (URL)',
+                      hintText: 'https://example.com/avatar.jpg',
+                      prefixIcon: const Icon(Icons.link_rounded, color: AppTheme.primaryColor),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.content_paste_rounded, color: AppTheme.primaryColor),
+                        tooltip: 'Dán từ bộ nhớ tạm',
+                        onPressed: () async {
+                          final data = await Clipboard.getData(Clipboard.kTextPlain);
+                          if (data != null && data.text != null) {
+                            setDialogState(() {
+                              urlController.text = data.text!.trim();
+                            });
+                          }
+                        },
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onChanged: (val) {
+                      setDialogState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Quick Select Sample Avatars
+                  Text(
+                    'Hoặc chọn mẫu ảnh gợi ý sẵn:',
+                    style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: sampleAvatars.map((sample) {
+                      return ActionChip(
+                        avatar: ClipOval(
+                          child: Image.network(
+                            sample['url']!,
+                            width: 20,
+                            height: 20,
+                            fit: BoxFit.cover,
+                            headers: const {'User-Agent': 'Mozilla/5.0'},
+                          ),
+                        ),
+                        label: Text(sample['title']!, style: GoogleFonts.beVietnamPro(fontSize: 11)),
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.08),
+                        onPressed: () {
+                          setDialogState(() {
+                            urlController.text = sample['url']!;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  _appState.updateAvatarUrl(urlController.text.trim());
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã cập nhật ảnh đại diện mới thành công!', style: GoogleFonts.beVietnamPro()),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                },
+                child: Text('Lưu Ảnh', style: GoogleFonts.beVietnamPro(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _handleLogout() {
     showDialog(
       context: context,
@@ -112,145 +299,182 @@ class _ProfileViewState extends State<ProfileView> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // Header banner color
-          SliverAppBar(
-            expandedHeight: 180,
-            floating: false,
-            pinned: true,
-            backgroundColor: AppTheme.primaryColor,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                color: AppTheme.primaryColor,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -50,
-                      right: -50,
-                      child: Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.04),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -20,
-                      left: -20,
-                      child: Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.03),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(_isEditing ? Icons.close_rounded : Icons.edit_rounded, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    if (_isEditing) {
-                      // Cancel editing, restore initial values
-                      _nameController.text = user.name;
-                      _phoneController.text = user.phone;
-                      _addressController.text = user.address;
-                    }
-                    _isEditing = !_isEditing;
-                  });
-                },
-                tooltip: _isEditing ? 'Hủy chỉnh sửa' : 'Chỉnh sửa hồ sơ',
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout_rounded, color: Colors.white),
-                onPressed: _handleLogout,
-                tooltip: 'Đăng xuất',
-              ),
-            ],
-          ),
-
-          // Profile content body
-          SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -60),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Top Header Banner & Avatar Stack
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 160,
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 16,
+                    right: 16,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Avatar representation
-                      Container(
-                        width: 110,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(5),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: AppTheme.primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                              style: GoogleFonts.beVietnamPro(
-                                fontSize: 42,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.goldColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // User Basic Info
+                      const SizedBox(width: 48),
                       Text(
-                        user.name,
+                        'Hồ Sơ Cá Nhân',
                         style: GoogleFonts.beVietnamPro(
-                          fontSize: 22,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textDark,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '@${user.username}',
-                          style: GoogleFonts.beVietnamPro(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primaryColor,
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(_isEditing ? Icons.close_rounded : Icons.edit_rounded, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                if (_isEditing) {
+                                  _nameController.text = user.name;
+                                  _phoneController.text = user.phone;
+                                  _addressController.text = user.address;
+                                }
+                                _isEditing = !_isEditing;
+                              });
+                            },
+                            tooltip: _isEditing ? 'Hủy chỉnh sửa' : 'Chỉnh sửa hồ sơ',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                            onPressed: _handleLogout,
+                            tooltip: 'Đăng xuất',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Avatar Representation (Clickable with Camera Badge)
+                Positioned(
+                  bottom: -50,
+                  child: GestureDetector(
+                    onTap: _showChangeAvatarDialog,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 15,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: ClipOval(
+                              child: user.avatarUrl.trim().isNotEmpty
+                                  ? Image.network(
+                                      user.avatarUrl.trim(),
+                                      headers: const {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
+                                      width: 102,
+                                      height: 102,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Center(
+                                        child: Text(
+                                          user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
+                                          style: GoogleFonts.beVietnamPro(
+                                            fontSize: 42,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppTheme.goldColor,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
+                                        style: GoogleFonts.beVietnamPro(
+                                          fontSize: 42,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.goldColor,
+                                        ),
+                                      ),
+                                    ),
+                            ),
                           ),
                         ),
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: AppTheme.goldColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, size: 16, color: AppTheme.primaryColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 60),
+
+            // Profile Content Body
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    // User Basic Info
+                    Text(
+                      user.name,
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.email,
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '@${user.username}',
+                        style: GoogleFonts.beVietnamPro(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email,
                         style: GoogleFonts.beVietnamPro(
                           fontSize: 14,
                           color: AppTheme.textLight,
@@ -377,11 +601,10 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
   }
 
   Widget _buildProfileField({

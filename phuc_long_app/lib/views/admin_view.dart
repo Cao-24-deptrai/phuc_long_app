@@ -535,9 +535,36 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    beverage.name,
-                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 2,
+                    children: [
+                      Text(
+                        beverage.name,
+                        style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+                      ),
+                      if (beverage.isPopular)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrangeAccent.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.deepOrangeAccent.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 12),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Bán chạy',
+                                style: GoogleFonts.beVietnamPro(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.deepOrangeAccent),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                   Text(
                     '${beverage.price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ',
@@ -973,62 +1000,85 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     final nameController = TextEditingController(text: beverage.name);
     final priceController = TextEditingController(text: CurrencyInputFormatter.format(beverage.price));
     final descController = TextEditingController(text: beverage.description);
+    bool isPopular = beverage.isPopular;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Sửa sản phẩm', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Tên sản phẩm'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [CurrencyInputFormatter()],
-                decoration: const InputDecoration(
-                  labelText: 'Giá bán',
-                  suffixText: 'đ',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Sửa sản phẩm', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Tên sản phẩm'),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                keyboardType: TextInputType.multiline,
-                minLines: 3,
-                maxLines: null,
-                decoration: const InputDecoration(
-                  labelText: 'Mô tả chi tiết',
-                  alignLabelWithHint: true,
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
+                  decoration: const InputDecoration(
+                    labelText: 'Giá bán',
+                    suffixText: 'đ',
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  keyboardType: TextInputType.multiline,
+                  minLines: 3,
+                  maxLines: null,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả chi tiết',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Row(
+                    children: [
+                      Text('Sản phẩm Bán chạy', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.w600, fontSize: 14)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 18),
+                    ],
+                  ),
+                  subtitle: Text('Hiển thị nhãn Bán Chạy / Nổi Bật cho khách hàng', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                  value: isPopular,
+                  activeColor: Colors.deepOrangeAccent,
+                  onChanged: (val) {
+                    setDialogState(() {
+                      isPopular = val;
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            ),
+            TextButton(
+              onPressed: () {
+                final newPrice = CurrencyInputFormatter.parse(priceController.text, defaultValue: beverage.price);
+                final updated = beverage.copyWith(
+                  name: nameController.text.trim(),
+                  price: newPrice,
+                  description: descController.text.trim(),
+                  isPopular: isPopular,
+                );
+                _appState.updateBeverage(updated);
+                Navigator.pop(context);
+              },
+              child: Text('Cập nhật', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
-          ),
-          TextButton(
-            onPressed: () {
-              final newPrice = CurrencyInputFormatter.parse(priceController.text, defaultValue: beverage.price);
-              final updated = beverage.copyWith(
-                name: nameController.text.trim(),
-                price: newPrice,
-                description: descController.text.trim(),
-              );
-              _appState.updateBeverage(updated);
-              Navigator.pop(context);
-            },
-            child: Text('Cập nhật', style: GoogleFonts.beVietnamPro(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
@@ -1039,6 +1089,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     final priceController = TextEditingController();
     final descController = TextEditingController();
     BeverageCategory category = BeverageCategory.tea;
+    bool isPopular = false;
 
     showDialog(
       context: context,
@@ -1094,6 +1145,25 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     alignLabelWithHint: true,
                   ),
                 ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Row(
+                    children: [
+                      Text('Sản phẩm Bán chạy', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.w600, fontSize: 14)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 18),
+                    ],
+                  ),
+                  subtitle: Text('Hiển thị nhãn Bán Chạy / Nổi Bật cho khách hàng', style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight)),
+                  value: isPopular,
+                  activeColor: Colors.deepOrangeAccent,
+                  onChanged: (val) {
+                    setDialogState(() {
+                      isPopular = val;
+                    });
+                  },
+                ),
               ],
             ),
           ),
@@ -1117,6 +1187,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                       ? descController.text.trim()
                       : 'Thức uống Phúc Long đặc trưng thơm ngon mát lạnh.',
                   rating: 5.0,
+                  isPopular: isPopular,
                 );
 
                 _appState.addBeverage(newBeverage);

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/beverage.dart';
 import '../models/promotion.dart';
+import '../models/review.dart';
 import '../state/app_state.dart';
 import '../widgets/vector_logo.dart';
 import '../widgets/shimmer_banner.dart';
@@ -604,6 +605,11 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
   double _sugarLevel = 1.0;
   double _iceLevel = 1.0;
 
+  String _reviewFilter = 'all';
+  double _userRating = 5.0;
+  final TextEditingController _commentController = TextEditingController();
+  bool _isSubmittingReview = false;
+
   @override
   void initState() {
     super.initState();
@@ -795,6 +801,106 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
                       _buildIceOption('50% đá', 0.5),
                       _buildIceOption('100% đá', 1.0),
                     ],
+                  ),
+
+                  const Divider(height: 36, color: AppTheme.dividerColor),
+
+                  // REVIEWS & RATINGS SECTION
+                  Builder(
+                    builder: (context) {
+                      final appState = AppState();
+                      final allProductReviews = appState.getReviewsForProduct(widget.beverage.id);
+                      List<Review> filteredReviews = List.from(allProductReviews);
+
+                      if (_reviewFilter == 'newest') {
+                        filteredReviews.sort((a, b) => b.date.compareTo(a.date));
+                      } else if (_reviewFilter == '5') {
+                        filteredReviews = filteredReviews.where((r) => r.rating == 5.0).toList();
+                      } else if (_reviewFilter == '4') {
+                        filteredReviews = filteredReviews.where((r) => r.rating == 4.0).toList();
+                      } else if (_reviewFilter == '3') {
+                        filteredReviews = filteredReviews.where((r) => r.rating == 3.0).toList();
+                      } else if (_reviewFilter == '2') {
+                        filteredReviews = filteredReviews.where((r) => r.rating == 2.0).toList();
+                      } else if (_reviewFilter == '1') {
+                        filteredReviews = filteredReviews.where((r) => r.rating == 1.0).toList();
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Đánh Giá Từ Khách Hàng ⭐',
+                                style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.goldColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.star_rounded, color: AppTheme.goldColor, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${widget.beverage.rating} / 5.0 (${allProductReviews.length})',
+                                      style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.textDark),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // FILTER CHIPS
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: [
+                                _buildReviewFilterChip('all', 'Tất cả (${allProductReviews.length})'),
+                                _buildReviewFilterChip('newest', 'Mới nhất 🕒'),
+                                _buildReviewFilterChip('5', '5 ⭐ (${allProductReviews.where((r) => r.rating == 5.0).length})'),
+                                _buildReviewFilterChip('4', '4 ⭐ (${allProductReviews.where((r) => r.rating == 4.0).length})'),
+                                _buildReviewFilterChip('3', '3 ⭐ (${allProductReviews.where((r) => r.rating == 3.0).length})'),
+                                _buildReviewFilterChip('2', '2 ⭐ (${allProductReviews.where((r) => r.rating == 2.0).length})'),
+                                _buildReviewFilterChip('1', '1 ⭐ (${allProductReviews.where((r) => r.rating == 1.0).length})'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // REVIEWS LIST
+                          if (filteredReviews.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppTheme.backgroundColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.dividerColor),
+                              ),
+                              child: Text(
+                                'Chưa có đánh giá nào phù hợp với bộ lọc này.',
+                                style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight),
+                              ),
+                            )
+                          else
+                            ...filteredReviews.map((rev) => _buildReviewItem(rev)),
+
+                          const SizedBox(height: 16),
+
+                          // ADD REVIEW FORM
+                          _buildAddReviewSection(),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -1018,6 +1124,308 @@ class _BeverageDetailsSheetState extends State<_BeverageDetailsSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReviewFilterChip(String key, String label) {
+    final isSelected = _reviewFilter == key;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(label),
+        labelStyle: GoogleFonts.beVietnamPro(
+          color: isSelected ? Colors.white : AppTheme.textDark,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 11,
+        ),
+        backgroundColor: Colors.white,
+        selectedColor: AppTheme.primaryColor,
+        checkmarkColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
+          ),
+        ),
+        onSelected: (bool selected) {
+          setState(() {
+            _reviewFilter = key;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildReviewItem(Review review) {
+    final appState = AppState();
+    String currentAvatarUrl = review.userAvatar.trim();
+
+    // Look up real-time live user avatar
+    final uKey = review.userEmail.trim().toLowerCase();
+    final liveUser = appState.users[uKey];
+    if (liveUser != null && liveUser.avatarUrl.trim().isNotEmpty) {
+      currentAvatarUrl = liveUser.avatarUrl.trim();
+    } else if (appState.currentUser != null &&
+        appState.currentUser!.email.trim().toLowerCase() == uKey &&
+        appState.currentUser!.avatarUrl.trim().isNotEmpty) {
+      currentAvatarUrl = appState.currentUser!.avatarUrl.trim();
+    }
+
+    final dateStr = '${review.date.day.toString().padLeft(2, '0')}/${review.date.month.toString().padLeft(2, '0')}/${review.date.year} ${review.date.hour.toString().padLeft(2, '0')}:${review.date.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipOval(
+                child: currentAvatarUrl.isNotEmpty
+                    ? Image.network(
+                        currentAvatarUrl,
+                        headers: const {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 36,
+                          height: 36,
+                          color: AppTheme.primaryColor,
+                          child: Center(
+                            child: Text(
+                              review.userName.isNotEmpty ? review.userName.substring(0, 1).toUpperCase() : 'U',
+                              style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        width: 36,
+                        height: 36,
+                        color: AppTheme.primaryColor,
+                        child: Center(
+                          child: Text(
+                            review.userName.isNotEmpty ? review.userName.substring(0, 1).toUpperCase() : 'U',
+                            style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.userName,
+                      style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        ...List.generate(5, (i) {
+                          return Icon(
+                            i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                            color: Colors.amber,
+                            size: 14,
+                          );
+                        }),
+                        const SizedBox(width: 6),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.beVietnamPro(fontSize: 10, color: AppTheme.textLight),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (review.comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.comment,
+              style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textDark, height: 1.4),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddReviewSection() {
+    final appState = AppState();
+    final canReview = appState.canUserReviewProduct(widget.beverage.id);
+
+    if (!canReview) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.15)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.lock_clock_rounded, color: AppTheme.primaryColor, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Đánh giá bị khóa',
+                    style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryColor),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Bạn chỉ có thể viết bình luận và đánh giá sau khi đã mua món này và đơn hàng được giao thành công.',
+                    style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textDark, height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Viết Bình Luận & Đánh Giá ✍️',
+            style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.primaryColor),
+          ),
+          const SizedBox(height: 8),
+          
+          // Star selector
+          Row(
+            children: [
+              Text('Đánh giá số sao:', style: GoogleFonts.beVietnamPro(fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(width: 8),
+              Row(
+                children: List.generate(5, (index) {
+                  final starVal = index + 1.0;
+                  return IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: Icon(
+                      starVal <= _userRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: Colors.amber,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _userRating = starVal;
+                      });
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '${_userRating.toStringAsFixed(0)} ⭐',
+                style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Comment TextField
+          TextField(
+            controller: _commentController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Hãy chia sẻ cảm nhận của bạn về hương vị món này...',
+              hintStyle: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.dividerColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryColor),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSubmittingReview
+                  ? null
+                  : () async {
+                      final comment = _commentController.text.trim();
+                      if (comment.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Vui lòng viết cảm nhận trước khi gửi!', style: GoogleFonts.beVietnamPro()),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() {
+                        _isSubmittingReview = true;
+                      });
+
+                      await appState.addReview(
+                        productId: widget.beverage.id,
+                        rating: _userRating,
+                        comment: comment,
+                      );
+
+                      if (!mounted) return;
+                      setState(() {
+                        _isSubmittingReview = false;
+                        _commentController.clear();
+                      });
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Đã gửi đánh giá thành công! Cảm ơn phản hồi của bạn.', style: GoogleFonts.beVietnamPro()),
+                          backgroundColor: AppTheme.primaryColor,
+                        ),
+                      );
+                    },
+              icon: const Icon(Icons.send_rounded, size: 18),
+              label: Text('Gửi Đánh Giá', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1674,27 +2082,59 @@ class _CartSheetState extends State<_CartSheet> {
                   ],
                 ),
 
-              // Available Vouchers Quick Picker
+              // Available Vouchers Quick Picker Cards (Horizontal Scroll)
               if (availablePromos.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                Text('Mã giảm giá khả dụng:', style: GoogleFonts.beVietnamPro(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textLight)),
+                Row(
+                  children: [
+                    Text('Mã giảm giá khả dụng (Vuốt ngang ➔):', style: GoogleFonts.beVietnamPro(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textLight)),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
                   child: Row(
                     children: availablePromos.map((p) {
+                      final isApplied = _appState.appliedPromotion?.code == p.code;
                       return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ActionChip(
-                          avatar: const Icon(Icons.card_giftcard, size: 14, color: AppTheme.goldColor),
-                          label: Text('${p.code} (${p.discountType == "percent" ? "${p.discountValue.toInt()}%" : "${(p.discountValue / 1000).toInt()}k"})'),
-                          labelStyle: GoogleFonts.beVietnamPro(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
-                          backgroundColor: Colors.white,
-                          side: const BorderSide(color: AppTheme.dividerColor),
-                          onPressed: () {
+                        padding: const EdgeInsets.only(right: 10.0),
+                        child: InkWell(
+                          onTap: () {
                             _promoCodeController.text = p.code;
                             _applyPromoCode();
                           },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isApplied ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isApplied ? AppTheme.primaryColor : AppTheme.dividerColor,
+                                width: isApplied ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.card_giftcard_rounded, size: 16, color: AppTheme.goldColor),
+                                const SizedBox(width: 6),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.code,
+                                      style: GoogleFonts.beVietnamPro(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                                    ),
+                                    Text(
+                                      p.discountType == "percent" ? "Giảm ${p.discountValue.toInt()}%" : "Giảm ${(p.discountValue / 1000).toInt()}k",
+                                      style: GoogleFonts.beVietnamPro(fontSize: 10, color: AppTheme.textLight),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     }).toList(),

@@ -6,6 +6,7 @@ class Beverage {
   final String id;
   final String name;
   final BeverageCategory category;
+  final String categoryName;
   final double price;
   final String imageUrl;
   final String description;
@@ -17,6 +18,7 @@ class Beverage {
     required this.id,
     required this.name,
     required this.category,
+    this.categoryName = '',
     required this.price,
     required this.imageUrl,
     required this.description,
@@ -29,6 +31,7 @@ class Beverage {
     String? id,
     String? name,
     BeverageCategory? category,
+    String? categoryName,
     double? price,
     String? imageUrl,
     String? description,
@@ -40,6 +43,7 @@ class Beverage {
       id: id ?? this.id,
       name: name ?? this.name,
       category: category ?? this.category,
+      categoryName: categoryName ?? this.categoryName,
       price: price ?? this.price,
       imageUrl: imageUrl ?? this.imageUrl,
       description: description ?? this.description,
@@ -54,6 +58,7 @@ class Beverage {
       'id': id,
       'name': name,
       'category': category.name,
+      'categoryName': categoryName.isNotEmpty ? categoryName : categoryDisplayName,
       'price': price,
       'imageUrl': imageUrl,
       'description': description,
@@ -72,10 +77,13 @@ class Beverage {
         break;
       }
     }
+    final catNameStr = (map['categoryName'] as String?)?.trim() ?? '';
+
     return Beverage(
       id: map['id'] ?? docId,
       name: map['name'] ?? '',
       category: cat,
+      categoryName: catNameStr,
       price: (map['price'] ?? 0.0).toDouble(),
       imageUrl: map['imageUrl'] ?? '',
       description: map['description'] ?? '',
@@ -91,6 +99,9 @@ class Beverage {
   }
 
   String get categoryDisplayName {
+    if (categoryName.trim().isNotEmpty) {
+      return categoryName.trim();
+    }
     switch (category) {
       case BeverageCategory.tea:
         return 'Trà Trái Cây';
@@ -242,6 +253,7 @@ class Order {
   final String customerPhone;
   final String customerAddress;
   String status; // Pending, Processing, Shipping, Completed, Cancelled
+  String cancelReason;
 
   Order({
     required this.id,
@@ -255,6 +267,7 @@ class Order {
     required this.customerPhone,
     required this.customerAddress,
     this.status = 'Chờ xử lý',
+    this.cancelReason = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -270,6 +283,7 @@ class Order {
       'customerPhone': customerPhone,
       'customerAddress': customerAddress,
       'status': status,
+      'cancelReason': cancelReason,
     };
   }
 
@@ -300,6 +314,7 @@ class Order {
       customerPhone: map['customerPhone'] ?? '',
       customerAddress: map['customerAddress'] ?? '',
       status: map['status'] ?? 'Chờ xử lý',
+      cancelReason: map['cancelReason'] ?? '',
     );
   }
 

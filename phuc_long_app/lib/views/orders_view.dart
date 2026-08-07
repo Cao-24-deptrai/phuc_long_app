@@ -32,6 +32,112 @@ class _OrdersViewState extends State<OrdersView> {
     }
   }
 
+  void _confirmCancelOrder(String orderId) {
+    final List<String> reasonOptions = [
+      'Đổi ý không muốn mua nữa',
+      'Muốn chọn món nước / size khác',
+      'Muốn thay đổi địa chỉ nhận hàng',
+      'Thời gian chờ giao hàng quá lâu',
+      'Đặt trùng đơn hàng',
+      'Nhập sai mã giảm giá / ưu đãi',
+    ];
+
+    final Set<String> selectedReasons = {};
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final bool canSubmit = selectedReasons.isNotEmpty;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Xác nhận Hủy Đơn',
+                  style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 18),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Vui lòng chọn ít nhất 1 lý do hủy đơn:',
+                  style: GoogleFonts.beVietnamPro(fontSize: 12, color: AppTheme.textLight, fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: reasonOptions.map((reason) {
+                  final isChecked = selectedReasons.contains(reason);
+                  return CheckboxListTile(
+                    value: isChecked,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    activeColor: Colors.redAccent,
+                    title: Text(
+                      reason,
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 13,
+                        color: isChecked ? AppTheme.textDark : AppTheme.textLight,
+                        fontWeight: isChecked ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setDialogState(() {
+                        if (val == true) {
+                          selectedReasons.add(reason);
+                        } else {
+                          selectedReasons.remove(reason);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Quay lại', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+              ),
+              ElevatedButton(
+                onPressed: canSubmit
+                    ? () async {
+                        final reasonString = selectedReasons.join('; ');
+                        await _appState.updateOrderStatus(orderId, 'Đã hủy', cancelReason: reasonString);
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Đã hủy đơn hàng #$orderId thành công!', style: GoogleFonts.beVietnamPro()),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(
+                  'Hủy Đơn',
+                  style: GoogleFonts.beVietnamPro(
+                    fontWeight: FontWeight.bold,
+                    color: canSubmit ? Colors.white : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userOrders = _appState.orders;
@@ -101,6 +207,14 @@ class _OrdersViewState extends State<OrdersView> {
                 final order = userOrders[index];
                 final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(order.date);
                 final isCompleted = order.status == 'Đã hoàn thành';
+                final isCancelled = order.status == 'Đã hủy';
+                final canCancel = !isCompleted && !isCancelled;
+
+                Color statusColor = isCompleted
+                    ? Colors.green
+                    : isCancelled
+                        ? Colors.redAccent
+                        : AppTheme.goldColor;
 
                 return Card(
                   margin: EdgeInsets.zero,
@@ -121,19 +235,18 @@ class _OrdersViewState extends State<OrdersView> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isCompleted
-                                    ? Colors.green.withOpacity(0.08)
-                                    : AppTheme.goldColor.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(6),
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: statusColor.withOpacity(0.3)),
                               ),
                               child: Text(
                                 order.status,
                                 style: GoogleFonts.beVietnamPro(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isCompleted ? Colors.green : AppTheme.goldColor,
+                                  color: statusColor,
                                 ),
                               ),
                             ),
@@ -191,6 +304,53 @@ class _OrdersViewState extends State<OrdersView> {
                             ),
                           ],
                         ),
+                         if (isCancelled && order.cancelReason.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.red.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.info_outline_rounded, size: 16, color: Colors.redAccent),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Lý do hủy: ${order.cancelReason}',
+                                    style: GoogleFonts.beVietnamPro(fontSize: 12, color: Colors.redAccent),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (canCancel) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _confirmCancelOrder(order.id),
+                              icon: const Icon(Icons.cancel_outlined, size: 16, color: Colors.redAccent),
+                              label: Text(
+                                'Hủy Đơn Hàng',
+                                style: GoogleFonts.beVietnamPro(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.redAccent),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

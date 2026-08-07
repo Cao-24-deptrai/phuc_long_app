@@ -18,7 +18,7 @@ class StoreView extends StatefulWidget {
 }
 
 class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMixin {
-  BeverageCategory _selectedCategory = BeverageCategory.all;
+  String _selectedCategoryName = 'Tất cả';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final AppState _appState = AppState();
@@ -42,7 +42,9 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
 
   List<Beverage> get _filteredBeverages {
     return _appState.beverages.where((b) {
-      final matchesCategory = _selectedCategory == BeverageCategory.all || b.category == _selectedCategory;
+      final matchesCategory = _selectedCategoryName == 'Tất cả' ||
+          b.categoryDisplayName.trim().toLowerCase() == _selectedCategoryName.trim().toLowerCase() ||
+          b.category.name.trim().toLowerCase() == _selectedCategoryName.trim().toLowerCase();
       final matchesSearch = b.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           b.description.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -267,7 +269,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                       ),
                       const SizedBox(height: 24),
 
-                      // Category Tabs
+                      // Category Tabs (Hiển thị các danh mục thực đơn động từ Firebase Firestore)
                       Text(
                         'Danh Mục Thực Đơn',
                         style: GoogleFonts.beVietnamPro(
@@ -277,18 +279,29 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
                         ),
                       ),
                       const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Row(
-                          children: [
-                            _buildCategoryChip(BeverageCategory.all, 'Tất cả 🍃'),
-                            _buildCategoryChip(BeverageCategory.tea, 'Trà Trứ Danh 🍵'),
-                            _buildCategoryChip(BeverageCategory.milkTea, 'Trà Sữa 🧋'),
-                            _buildCategoryChip(BeverageCategory.coffee, 'Cà Phê ☕'),
-                            _buildCategoryChip(BeverageCategory.special, 'Đặc Sản 🌟'),
-                          ],
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final firestoreCategories = _appState.categories.map((c) => c.name).toList();
+                          final categoriesList = [
+                            'Tất cả 🍃',
+                            if (firestoreCategories.isNotEmpty)
+                              ...firestoreCategories
+                            else ...[
+                              'Trà Trái Cây 🍵',
+                              'Trà Sữa 🧋',
+                              'Cà Phê ☕',
+                              'Món Đặc Biệt / Đá Xay 🌟'
+                            ],
+                          ];
+
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: categoriesList.map((catName) => _buildCategoryChip(catName)).toList(),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -409,13 +422,17 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildCategoryChip(BeverageCategory category, String label) {
-    final isSelected = _selectedCategory == category;
+  Widget _buildCategoryChip(String rawLabel) {
+    final cleanName = rawLabel.replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]', unicode: true), '').trim();
+    final isSelected = _selectedCategoryName == 'Tất cả'
+        ? (rawLabel.startsWith('Tất cả') || cleanName == 'Tất cả')
+        : (_selectedCategoryName.trim().toLowerCase() == cleanName.toLowerCase());
+
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
       child: FilterChip(
         selected: isSelected,
-        label: Text(label),
+        label: Text(rawLabel),
         labelStyle: GoogleFonts.beVietnamPro(
           color: isSelected ? Colors.white : AppTheme.textDark,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -432,7 +449,7 @@ class _StoreViewState extends State<StoreView> with SingleTickerProviderStateMix
         ),
         onSelected: (bool selected) {
           setState(() {
-            _selectedCategory = category;
+            _selectedCategoryName = cleanName;
           });
         },
       ),
@@ -1809,7 +1826,7 @@ class _CartSheetState extends State<_CartSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Đơn hàng của bạn đã được ghi nhận trực tiếp vào Cloud Firestore và đang được cửa hàng chế biến.',
+                'Đơn hàng của bạn đã được gửi thành công và đang được cửa hàng chế biến.',
                 style: GoogleFonts.beVietnamPro(color: AppTheme.textLight, fontSize: 13),
                 textAlign: TextAlign.center,
               ),

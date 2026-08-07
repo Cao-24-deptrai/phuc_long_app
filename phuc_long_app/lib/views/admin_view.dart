@@ -354,7 +354,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tổng quan cửa hàng (Firebase Firestore)',
+            'Tổng quan cửa hàng',
             style: GoogleFonts.beVietnamPro(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 16),
@@ -931,7 +931,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           children: [
             const Icon(Icons.receipt_long_outlined, size: 64, color: AppTheme.textLight),
             const SizedBox(height: 12),
-            Text('Chưa có đơn hàng nào trên Cloud Firestore.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            Text('Chưa có đơn hàng nào.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ],
         ),
       );
@@ -1014,7 +1014,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     const Divider(height: 24, color: AppTheme.dividerColor),
                     
                     // Order status action triggers
-                    Text('Cập nhật trạng thái đơn (Đẩy Firestore):', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text('Cập nhật trạng thái đơn hàng:', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -1098,6 +1098,18 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                         beverage.name,
                         style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                        ),
+                        child: Text(
+                          beverage.categoryDisplayName,
+                          style: GoogleFonts.beVietnamPro(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        ),
+                      ),
                       if (beverage.isPopular)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1145,10 +1157,18 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               },
             ),
 
-            // Edit button
+            // Quick Edit Category button
+            IconButton(
+              icon: const Icon(Icons.category_outlined, color: AppTheme.primaryColor),
+              onPressed: () => _showEditProductCategoryDialog(beverage),
+              tooltip: 'Đổi danh mục sản phẩm',
+            ),
+
+            // Edit product button
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: AppTheme.textLight),
               onPressed: () => _showEditProductDialog(beverage),
+              tooltip: 'Sửa thông tin sản phẩm',
             ),
 
             // Delete button
@@ -1157,6 +1177,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               onPressed: () {
                 _appState.deleteBeverage(beverage.id);
               },
+              tooltip: 'Xóa sản phẩm',
             ),
           ],
         );
@@ -1175,7 +1196,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           children: [
             const Icon(Icons.local_offer_outlined, size: 64, color: AppTheme.textLight),
             const SizedBox(height: 12),
-            Text('Chưa có mã khuyến mãi nào trên Cloud Firestore.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            Text('Chưa có mã khuyến mãi nào.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
           ],
         ),
       );
@@ -1310,7 +1331,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Quản lý Danh mục (Cloud Firestore)',
+                'Quản lý Danh mục',
                 style: GoogleFonts.beVietnamPro(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
               ),
               ElevatedButton.icon(
@@ -1331,7 +1352,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
           if (categories.isEmpty)
             Expanded(
               child: Center(
-                child: Text('Chưa có danh mục nào trên Cloud Firestore.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+                child: Text('Chưa có danh mục nào.', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
               ),
             )
           else
@@ -1890,6 +1911,84 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     );
   }
 
+  // Dialog to Edit Product Category ONLY
+  void _showEditProductCategoryDialog(Beverage beverage) {
+    final availableCats = _appState.categories.map((c) => c.name).toList();
+    if (availableCats.isEmpty) {
+      availableCats.addAll(['Trà Trái Cây', 'Trà Sữa', 'Cà Phê', 'Món Đặc Biệt / Đá Xay']);
+    }
+
+    String selectedCategoryName = availableCats.contains(beverage.categoryDisplayName)
+        ? beverage.categoryDisplayName
+        : availableCats.first;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Sửa Danh Mục Sản Phẩm', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sản phẩm: "${beverage.name}"',
+                style: GoogleFonts.beVietnamPro(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedCategoryName,
+                decoration: InputDecoration(
+                  labelText: 'Chọn Danh Mục Mới',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.category_rounded, color: AppTheme.primaryColor),
+                ),
+                items: availableCats.map((catName) {
+                  return DropdownMenuItem<String>(
+                    value: catName,
+                    child: Text(catName, style: GoogleFonts.beVietnamPro(fontSize: 14)),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setDialogState(() {
+                      selectedCategoryName = val;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy', style: GoogleFonts.beVietnamPro(color: AppTheme.textLight)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await _appState.updateBeverageCategory(beverage.id, selectedCategoryName);
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã cập nhật danh mục của "${beverage.name}" thành "$selectedCategoryName"!', style: GoogleFonts.beVietnamPro()),
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Cập nhật', style: GoogleFonts.beVietnamPro(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Dialog to Edit Product details
   void _showEditProductDialog(Beverage beverage) {
     final nameController = TextEditingController(text: beverage.name);
@@ -1897,6 +1996,14 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     final descController = TextEditingController(text: beverage.description);
     final imageUrlController = TextEditingController(text: beverage.imageUrl);
     bool isPopular = beverage.isPopular;
+
+    final availableCats = _appState.categories.map((c) => c.name).toList();
+    if (availableCats.isEmpty) {
+      availableCats.addAll(['Trà Trái Cây', 'Trà Sữa', 'Cà Phê', 'Món Đặc Biệt / Đá Xay']);
+    }
+    String selectedCategoryName = availableCats.contains(beverage.categoryDisplayName)
+        ? beverage.categoryDisplayName
+        : availableCats.first;
 
     showDialog(
       context: context,
@@ -1911,6 +2018,24 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 TextField(
                   controller: nameController,
                   decoration: const InputDecoration(labelText: 'Tên sản phẩm'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: availableCats.contains(selectedCategoryName) ? selectedCategoryName : availableCats.first,
+                  decoration: const InputDecoration(labelText: 'Danh mục sản phẩm'),
+                  items: availableCats.map((catName) {
+                    return DropdownMenuItem<String>(
+                      value: catName,
+                      child: Text(catName, style: GoogleFonts.beVietnamPro(fontSize: 14)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        selectedCategoryName = val;
+                      });
+                    }
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -2017,6 +2142,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 final newPrice = CurrencyInputFormatter.parse(priceController.text, defaultValue: beverage.price);
                 final updated = beverage.copyWith(
                   name: nameController.text.trim(),
+                  categoryName: selectedCategoryName,
                   price: newPrice,
                   imageUrl: imageUrlController.text.trim().isNotEmpty ? imageUrlController.text.trim() : beverage.imageUrl,
                   description: descController.text.trim(),
@@ -2041,8 +2167,13 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     final imageUrlController = TextEditingController(
       text: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=500&auto=format&fit=crop&q=60',
     );
-    BeverageCategory category = BeverageCategory.tea;
     bool isPopular = false;
+
+    final availableCats = _appState.categories.map((c) => c.name).toList();
+    if (availableCats.isEmpty) {
+      availableCats.addAll(['Trà Trái Cây', 'Trà Sữa', 'Cà Phê', 'Món Đặc Biệt / Đá Xay']);
+    }
+    String selectedCategoryName = availableCats.first;
 
     showDialog(
       context: context,
@@ -2059,6 +2190,24 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   decoration: const InputDecoration(labelText: 'Tên thức uống'),
                 ),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: availableCats.contains(selectedCategoryName) ? selectedCategoryName : availableCats.first,
+                  decoration: const InputDecoration(labelText: 'Danh mục sản phẩm'),
+                  items: availableCats.map((catName) {
+                    return DropdownMenuItem<String>(
+                      value: catName,
+                      child: Text(catName, style: GoogleFonts.beVietnamPro(fontSize: 14)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        selectedCategoryName = val;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: priceController,
                   keyboardType: TextInputType.number,
@@ -2068,24 +2217,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                     hintText: 'Ví dụ: 55.000',
                     suffixText: 'đ',
                   ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<BeverageCategory>(
-                  value: category,
-                  decoration: const InputDecoration(labelText: 'Phân loại'),
-                  items: const [
-                    DropdownMenuItem(value: BeverageCategory.tea, child: Text('Trà nguyên bản')),
-                    DropdownMenuItem(value: BeverageCategory.milkTea, child: Text('Trà sữa')),
-                    DropdownMenuItem(value: BeverageCategory.coffee, child: Text('Cà phê')),
-                    DropdownMenuItem(value: BeverageCategory.special, child: Text('Đặc biệt')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setDialogState(() {
-                        category = val;
-                      });
-                    }
-                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -2189,7 +2320,8 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                 final newBeverage = Beverage(
                   id: 'PL-${DateTime.now().millisecondsSinceEpoch}',
                   name: nameController.text.trim(),
-                  category: category,
+                  category: BeverageCategory.tea,
+                  categoryName: selectedCategoryName,
                   price: price,
                   imageUrl: imgUrl,
                   description: descController.text.trim().isNotEmpty

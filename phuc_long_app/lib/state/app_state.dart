@@ -724,6 +724,23 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> updateBeverageCategory(String beverageId, String newCategoryName) async {
+    final index = _beverages.indexWhere((b) => b.id == beverageId);
+    if (index != -1) {
+      final updated = _beverages[index].copyWith(categoryName: newCategoryName);
+      _beverages[index] = updated;
+      notifyListeners();
+
+      try {
+        await FirebaseFirestore.instance.collection('beverages').doc(beverageId).update({
+          'categoryName': newCategoryName,
+        });
+      } catch (e) {
+        debugPrint("Firestore Update Beverage Category Error: $e");
+      }
+    }
+  }
+
   Future<void> toggleAvailability(String id) async {
     final index = _beverages.indexWhere((b) => b.id == id);
     if (index != -1) {
@@ -983,17 +1000,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateOrderStatus(String orderId, String status) async {
+  Future<void> updateOrderStatus(String orderId, String status, {String cancelReason = ''}) async {
     final index = _orders.indexWhere((o) => o.id == orderId);
     if (index != -1) {
       _orders[index].status = status;
+      if (cancelReason.isNotEmpty) {
+        _orders[index].cancelReason = cancelReason;
+      }
       notifyListeners();
     }
 
     try {
-      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
-        'status': status,
-      });
+      final updateData = <String, dynamic>{'status': status};
+      if (cancelReason.isNotEmpty) {
+        updateData['cancelReason'] = cancelReason;
+      }
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update(updateData);
     } catch (e) {
       debugPrint("Firestore Update Order Status Error: $e");
     }
